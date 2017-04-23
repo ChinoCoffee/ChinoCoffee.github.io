@@ -113,7 +113,7 @@
 &lt;/pre&gt;&lt;/div&gt;
 
 
-&lt;p&gt;実際のレンダリングは１フレームを描画する場合 &lt;code&gt;RE_BlenderFrame&lt;/code&gt;、アニメーションの場合 &lt;code&gt;RE_BlenderFrame&lt;/code&gt; で行われるみたいだ。&lt;code&gt;RE_BlenderFrame&lt;/code&gt; は &lt;a href="https://git.blender.org/gitweb/gitweb.cgi/blender.git/blob/HEAD:/source/blender/render/intern/source/pipeline.c#l3202"&gt;/render/intern/source/pipeline.c&lt;/a&gt; に実装がある。この &lt;code&gt;pipeline.c&lt;/code&gt; でようやく &lt;code&gt;Freestyle&lt;/code&gt; の文字が出現し始める。&lt;/p&gt;
+&lt;p&gt;実際のレンダリングは１フレームを描画する場合 &lt;code&gt;RE_BlenderFrame&lt;/code&gt;、アニメーションの場合 &lt;code&gt;RE_BlenderAnim&lt;/code&gt; で行われるみたいだ。&lt;code&gt;RE_BlenderFrame&lt;/code&gt; は &lt;a href="https://git.blender.org/gitweb/gitweb.cgi/blender.git/blob/HEAD:/source/blender/render/intern/source/pipeline.c#l3202"&gt;/render/intern/source/pipeline.c&lt;/a&gt; に実装がある。この &lt;code&gt;pipeline.c&lt;/code&gt; でようやく &lt;code&gt;Freestyle&lt;/code&gt; の文字が出現し始める。&lt;/p&gt;
 &lt;h3&gt;2. /render/intern/source/pipeline.c&lt;/h3&gt;
 &lt;p&gt;&lt;code&gt;pipeline.c&lt;/code&gt; はレンダリング処理が主に記述された 4,000 行ほどのファイルである。ここでは &lt;a href="https://git.blender.org/gitweb/gitweb.cgi/blender.git/blob/HEAD:/source/blender/freestyle/FRS_freestyle.h"&gt;/freestyle/FRS_freestyle.h&lt;/a&gt; がインクルードされており &lt;code&gt;pipeline.c&lt;/code&gt; のいくつかの関数で様々な Freestyle の関数が呼び出されている。&lt;code&gt;FRS_freestyle.h&lt;/code&gt; の関数名には &lt;code&gt;FRS_&lt;/code&gt; という prefix が基本的に付けられており、この prefix で Blender のソースコード全体を検索すると Freestyle が外部から呼び出されている場面も見つけることができるので便利である。&lt;/p&gt;
 &lt;p&gt;&lt;code&gt;pipeline.c&lt;/code&gt; の中で実際に呼び出されているのは以下の7つのようだ。&lt;/p&gt;

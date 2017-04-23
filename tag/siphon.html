@@ -145,7 +145,7 @@
 </pre></div>
 
 
-<p>実際のレンダリングは１フレームを描画する場合 <code>RE_BlenderFrame</code>、アニメーションの場合 <code>RE_BlenderFrame</code> で行われるみたいだ。<code>RE_BlenderFrame</code> は <a href="https://git.blender.org/gitweb/gitweb.cgi/blender.git/blob/HEAD:/source/blender/render/intern/source/pipeline.c#l3202">/render/intern/source/pipeline.c</a> に実装がある。この <code>pipeline.c</code> でようやく <code>Freestyle</code> の文字が出現し始める。</p>
+<p>実際のレンダリングは１フレームを描画する場合 <code>RE_BlenderFrame</code>、アニメーションの場合 <code>RE_BlenderAnim</code> で行われるみたいだ。<code>RE_BlenderFrame</code> は <a href="https://git.blender.org/gitweb/gitweb.cgi/blender.git/blob/HEAD:/source/blender/render/intern/source/pipeline.c#l3202">/render/intern/source/pipeline.c</a> に実装がある。この <code>pipeline.c</code> でようやく <code>Freestyle</code> の文字が出現し始める。</p>
 <h3>2. /render/intern/source/pipeline.c</h3>
 <p><code>pipeline.c</code> はレンダリング処理が主に記述された 4,000 行ほどのファイルである。ここでは <a href="https://git.blender.org/gitweb/gitweb.cgi/blender.git/blob/HEAD:/source/blender/freestyle/FRS_freestyle.h">/freestyle/FRS_freestyle.h</a> がインクルードされており <code>pipeline.c</code> のいくつかの関数で様々な Freestyle の関数が呼び出されている。<code>FRS_freestyle.h</code> の関数名には <code>FRS_</code> という prefix が基本的に付けられており、この prefix で Blender のソースコード全体を検索すると Freestyle が外部から呼び出されている場面も見つけることができるので便利である。</p>
 <p><code>pipeline.c</code> の中で実際に呼び出されているのは以下の7つのようだ。</p>
