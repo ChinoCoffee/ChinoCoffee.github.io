@@ -14,7 +14,7 @@ small, strike, strong, sub, sup, tt, var,
 b, u, i, center,
 dl, dt, dd, li,
 fieldset, form, label, legend,
-table, caption, tbody, tfoot, thead, tr, th, td,
+caption,
 article, aside, canvas, details, embed,
 figure, figcaption, footer, header, hgroup,
 menu, nav, output, ruby, section, summary,
@@ -50,11 +50,22 @@ blockquote:before, blockquote:after,
 q:before, q:after {
     content: '';
     content: none;
-}
-table {
+          }
+
+table, tbody, tfoot, tr, thead, td {
+    border: 1px solid #aaa;
+    background-color: #ffffff;
     border-collapse: collapse;
-    border-spacing: 0;
+    padding: .2em 1em .2em 1em;
 }
+
+th {
+    border: 1px solid #aaa;
+    background-color: #f8fafd;
+    border-collapse: collapse;
+    padding: .2em 2em .2em 2em;
+}
+
 
 body {
     font-family: sans-serif;
