@@ -113,7 +113,7 @@
 </pre></div>
 
 
-<p>さて、上のコード片を読んだ限りでは <code>/* api callback */</code> 以下の行が処理の中心になりそうだ。試しに同じファイルに含まれている <code>ot-&gt;exec</code> の <code>screen_render_exec</code> 関数を見てみる。</p>
+<p>さて、上のコード片を読んだ限りでは <code>/* api callbacks */</code> 以下の行が処理の中心になりそうだ。試しに同じファイルに含まれている <code>ot-&gt;exec</code> の <code>screen_render_exec</code> 関数を見てみる。</p>
 <div class="highlight"><pre><span></span><span class="cm">/* executes blocking render */</span>
 <span class="k">static</span> <span class="kt">int</span> <span class="nf">screen_render_exec</span><span class="p">(</span><span class="n">bContext</span> <span class="o">*</span><span class="n">C</span><span class="p">,</span> <span class="n">wmOperator</span> <span class="o">*</span><span class="n">op</span><span class="p">)</span>
 <span class="p">{</span>
