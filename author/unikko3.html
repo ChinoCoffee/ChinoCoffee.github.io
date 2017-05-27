@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="jp">
+  <head>
+    <link href="https://fonts.googleapis.com/css?family=Dosis:200" rel="stylesheet">
+    <link href='https://fonts.googleapis.com/css?family=Quicksand:700' rel='stylesheet' type='text/css'>
+    <link href='https://fonts.googleapis.com/css?family=Josefin+Sans:300' rel='stylesheet' type='text/css'>
+    <meta charset="utf-8" />
+    <title>chino.coffee | Articles by unikko</title>
+    <link rel="shortcut icon" type="image/png" href="http://www.chino.coffee/favicon.png">
+    <link rel="shortcut icon" type="image/x-icon" href="http://www.chino.coffee/favicon.ico">
+    <link href="http://www.chino.coffee/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="chino.coffee Full Atom Feed" />
+    <link rel="stylesheet" href="http://www.chino.coffee/theme/css/screen.css" type="text/css" />
+    <link rel="stylesheet" href="http://www.chino.coffee/theme/css/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="http://www.chino.coffee/theme/css/print.css" type="text/css" media="print" />
+    <meta name="generator" content="Pelican" />
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+
+                <li class="ephemeral selected"><a href="http://www.chino.coffee/author/unikko3.html">unikko</a></li>
+                <li><a href="/blog.html">blog</li>
+                <li><a></a></li>
+
+                <li><a href="http://www.chino.coffee/pages/about.html">about</a></li>
+                <li><a href="http://www.chino.coffee/"></a></li>
+            </ul>
+        </nav>
+        <div class="header_box">
+            <!--   <h1><a href="/">chino.coffee</a></h1>   --->
+            <h1><a href="/"><img src="/images/logo.svg"></a></h1>
+        </div>
+
+        <hr />
+    </header>
+    <div id="wrapper">
+        <div id="content">            <h4 class="date">2017-04-03</h4>
+
+            <article class="post">
+                <h2 class="title">
+                    <a href="http://www.chino.coffee/siphon-memo-1.html" rel="bookmark" title="Permanent Link to &quot;Siphon memo 1&quot;">Siphon memo 1</a>
+                </h2>
+
+                <p>現在開発している Blender アドオン <a href="https://github.com/ChinoCoffee/siphon">Siphon</a> についての雑多なメモ。</p>
+<p>Siphon は <a href="https://www.blender.org/">Blender</a> の Non-photorealistic rendering engine である <a href="https://docs.blender.org/manual/en/dev/render/freestyle/index.html">Freestyle</a> をベースに構築する予定である。Freestyle は contour drawings に特化しており、従来のピクセル単位 <code>0D</code> ではないストローク <code>1D</code> という単位での表現手法を実現している。場所がバラバラになってしまうが Freestyle について GitHub 上にも<a href="https://github.com/ChinoCoffee/chino-3d/wiki/Freestyle">簡単なメモ</a>をまとめている。</p>
+<p>Freestyle では 3D と 2D の架け橋として <code>View Map</code> と呼ばれる重要なデータ構造が用意されている。View Map の処理はポリゴン数が多くなるほど重くなる傾向にある。Siphon では計算した View Map をキャッシュしておき、ノード上でパラメータを変えストロークの描画をインタラクティブに行えるようにするのが目標の一つである。とは言うものの、<a href="https://wiki.blender.org/index.php/User:Kjym3/DevFundProject/Proposal">Proposal for the Development of Blender's Non-Photorealistic Rendering Capabilities</a> の Task 2 で View map caching が触れられており、もしかするとキャッシュ機構自体はすでに実装されているのかもしれない。</p>
+<h3>輪郭線編集</h3>
+<p>輪郭線編集の必要性を感じたのは以下のツイートを見たことがきっかけであった。</p>
+<blockquote class="twitter-tweet" data-conversation="none" data-lang="en"><p lang="ja" dir="ltr"><a href="https://twitter.com/kohta0130">@kohta0130</a> 質問がたくさん来たので、こういうことです。顔を変形させなかったら、顎下のシルエットラインの影響で太って見えたり、受け口っぽく見えるんですよね。 <a href="https://t.co/p26F4zJlCb">pic.twitter.com/p26F4zJlCb</a></p>&mdash; 森江康太 Kohta Morie (@kohta0130) <a href="https://twitter.com/kohta0130/status/717962037008044032">April 7, 2016</a></blockquote>
+
+<script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+<p>この映像作品の場合、顎下のシルエットラインを 3D のモデルのポリゴンを編集することでレタッチしている。3D モデルを deform する方法については以下の記事も興味深い。</p>
+<ul>
+<li><a href="https://blenderyard.wordpress.com/2011/09/07/mesh-deform-with-non-uniform-perspective-projection/">Mesh deform with non-uniform perspective projection</a></li>
+</ul>
+<p>また、ポリゴンではなく輪郭線を 2D 上で操作するという方法もあり得る。Freestyle の論文には、歯車の歯先を丸くするというような例が載っており、輪郭線の編集についても可能なように設計されている。さらに、あるシーンの複数フレームの View Map をキャッシュし、ターゲットの輪郭線を deform する方法があれば、アニメーションもより 3D ぽく見えないように見せることもできるようになるかもしれない。あるいは temporal coherence へ対処する一つの方法になるかもしれないと考えている。</p>
+<h3>面の交差</h3>
+<p>Freestyle でよく聞く要望点として面と面の交差部分のエッジが描画されないというものがある。実装については T.K.氏の以下のディスカッションがとても参考になる。</p>
+<ul>
+<li><a href="https://lists.blender.org/pipermail/bf-blender-npr/2014-February/000002.html">[Bf-blender-npr] Intersections in freestyle</a></li>
+</ul>
+<h3>影の輪郭線</h3>
+<p>知人から 3DCG セルアニメーションの違和感として、影の輪郭線を指摘されたことがある。もし影の輪郭線も編集できれば違和感を減らせるかもしれない。</p>
+<p>Freestyle の論文では <code>feature lines</code> の種類を将来拡張するということが future work として書かれている。影の輪郭線を追加することも可能かもしれない。その場合、discontinuity などいくつか条件を満たすかどうか調べる必要があるかもしれない。</p>
+<p>また影の領域から hatching や shading も作れるかもしれない。領域というデータ構造は Freestyle では定義されていなさそうだ。いまのところ Freestyle の SVG 出力機能として <a href="https://docs.blender.org/manual/en/dev/render/freestyle/export_svg.html#exporting-fills">Exporting Fills</a> というものがある。これ自体は <code>Contour</code> 及び <code>External Contour</code> と predicates の組み合わせによって実現されているようである。</p>
+<h3>懸念事項</h3>
+<p>いま心配しているのは、実際にアドオンとして配布する場合、PyPI の依存ライブラリを含めたインストール手法をユーザに提供可能かということだ。開発では <a href="https://github.com/ChinoCoffee/chino-3d/wiki/pip">Blender に pip を導入し</a>改造している。<a href="https://github.com/hbldh/pyefd">PyEFD</a> なら依存ライブラリが NumPy だけなので大丈夫そうだ。<a href="http://www.menpo.org/">Menpo</a> は <a href="http://www.menpo.org/installation/pip.html">conda へのインストールを推奨している</a>ぐらい依存関係が複雑なので難しい。Keras や Chainer も同様で、サーバをたててもらい RPC で連携するような形になるかもしれない。</p>
+<h3>TODO</h3>
+<ol>
+<li>Freestyle の関数や predicates をノード化する</li>
+<li>planar graph の操作と PyEFD による輪郭線の編集</li>
+</ol>
+                <div class="clear"></div>
+
+                <div class="info">
+
+                    <a href="http://www.chino.coffee/category/software.html" rel="tag" class="category">Software</a>
+                    &nbsp;
+                    &nbsp;<a href="http://www.chino.coffee/tag/blender.html" class="tags">Blender</a>
+                    &nbsp;<a href="http://www.chino.coffee/tag/freestyle.html" class="tags">Freestyle</a>
+                    &nbsp;<a href="http://www.chino.coffee/tag/siphon.html" class="tags">Siphon</a>
+                </div>
+            </article>            <h4 class="date">2017-04-01</h4>
+
+            <article class="post">
+                <h2 class="title">
+                    <a href="http://www.chino.coffee/hello-world.html" rel="bookmark" title="Permanent Link to &quot;Hello world&quot;">Hello world</a>
+                </h2>
+
+                <p>こんにちは。ここでは開発しているソフトウェアの進捗などを書く予定です。</p>
+                <div class="clear"></div>
+
+                <div class="info">
+
+                </div>
+            </article>
+
+                <div class="clear"></div>
+                <div class="pages">
+
+                    <a href="http://www.chino.coffee/page/2" class="prev_page">&larr;&nbsp;Previous</a>
+                    <span>Page 3 of 3</span>
+                </div>
+
+        </div>
+        <div class="clear"></div>
+    </div>
+    <script type="text/javascript">
+    var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+    document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+    try {
+        var pageTracker = _gat._getTracker("UA-77422221-1");
+    pageTracker._trackPageview();
+    } catch(err) {}</script>
+</body>
+</html>

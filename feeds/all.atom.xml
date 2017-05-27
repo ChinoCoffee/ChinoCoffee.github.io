@@ -1,5 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>chino.coffee</title><link href="http://www.chino.coffee/" rel="alternate"></link><link href="http://www.chino.coffee/feeds/all.atom.xml" rel="self"></link><id>http://www.chino.coffee/</id><updated>2017-05-02T09:40:00+09:00</updated><entry><title>Siphon memo 4</title><link href="http://www.chino.coffee/siphon-memo-4.html" rel="alternate"></link><published>2017-05-02T09:40:00+09:00</published><updated>2017-05-02T09:40:00+09:00</updated><author><name>unikko</name></author><id>tag:www.chino.coffee,2017-05-02:/siphon-memo-4.html</id><summary type="html">&lt;p&gt;&lt;a href="http://www.chino.coffee/siphon-memo-3.html"&gt;前回&lt;/a&gt;に引き続き Blender における Freestyle の処理フローを調査している。今回は ViewMap の構築とキャッシュあたりについて調べてみよう。&lt;/p&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>chino.coffee</title><link href="http://www.chino.coffee/" rel="alternate"></link><link href="http://www.chino.coffee/feeds/all.atom.xml" rel="self"></link><id>http://www.chino.coffee/</id><updated>2017-05-27T06:50:00+09:00</updated><entry><title>Siphon memo 5 - shape manipulation</title><link href="http://www.chino.coffee/siphon-memo-5-shape-manipulation.html" rel="alternate"></link><published>2017-05-27T06:50:00+09:00</published><updated>2017-05-27T06:50:00+09:00</updated><author><name>unikko</name></author><id>tag:www.chino.coffee,2017-05-27:/siphon-memo-5-shape-manipulation.html</id><summary type="html">&lt;p&gt;現在開発している Blender-addon である Siphon は Freestyle から抽出した輪郭線を NodeTree 上でパラメータを変更しながらインタラクティブに編集するのが一つの目標である。
+今回は shape manipulation についていくつか調査し、Siphon への実装案についてメモする。&lt;/p&gt;
+&lt;h3&gt;1) 2.5D Cartoon Models&lt;/h3&gt;
+&lt;iframe src="https://player.vimeo.com/video/11941007?color=ff9933" width="640" height="560" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen&gt;&lt;/iframe&gt;
+
+&lt;p&gt;&lt;a href="https://vimeo.com/11941007"&gt;MIT 2.5D Cartoon Models&lt;/a&gt; from &lt;a href="https://vimeo.com/lesterbanks"&gt;lester banks&lt;/a&gt; on &lt;a href="https://vimeo.com"&gt;Vimeo&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href="https://dspace.mit.edu/handle/1721.1/73111"&gt;&lt;em&gt;Alec Rivers, Takeo Igarashi, and Frédo Durand. 2010. 2.5D cartoon models. ACM Transactions on Graphics 29, 4, Article 59 …&lt;/em&gt;&lt;/a&gt;&lt;/p&gt;</summary><content type="html">&lt;p&gt;現在開発している Blender-addon である Siphon は Freestyle から抽出した輪郭線を NodeTree 上でパラメータを変更しながらインタラクティブに編集するのが一つの目標である。
+今回は shape manipulation についていくつか調査し、Siphon への実装案についてメモする。&lt;/p&gt;
+&lt;h3&gt;1) 2.5D Cartoon Models&lt;/h3&gt;
+&lt;iframe src="https://player.vimeo.com/video/11941007?color=ff9933" width="640" height="560" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen&gt;&lt;/iframe&gt;
+
+&lt;p&gt;&lt;a href="https://vimeo.com/11941007"&gt;MIT 2.5D Cartoon Models&lt;/a&gt; from &lt;a href="https://vimeo.com/lesterbanks"&gt;lester banks&lt;/a&gt; on &lt;a href="https://vimeo.com"&gt;Vimeo&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href="https://dspace.mit.edu/handle/1721.1/73111"&gt;&lt;em&gt;Alec Rivers, Takeo Igarashi, and Frédo Durand. 2010. 2.5D cartoon models. ACM Transactions on Graphics 29, 4, Article 59 (July 2010), 7 pages.&lt;/em&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;この研究は 2D vector を三次元空間に配置し、擬似的なレンダリングを行うことによって様々な方向からキャラクターを描画できるようにする。上下左右などいくつかの方向の 2D vector を準備し対応付けしている。3Dモデルの作成は必要なく絵を描くことで立体的表現を構築できるメリットがある。また 3Dモデルでは不可能に近いイラストライクな表現を実現することができる。ちなみに Frédo Durand 氏は Freestyle の研究にも携わった人物である。&lt;/p&gt;
+&lt;p&gt;&lt;a href="http://www.live2d.com/en/products/euclid"&gt;Live2D Euclid&lt;/a&gt; は極めてイラストライクで自然なキャラクターを表現することができるが、顔部分の基本的な動作原理は 2.5D Cartoon Models とほぼ同じではないかと考えている。&lt;/p&gt;
+&lt;blockquote class="twitter-tweet" data-lang="en"&gt;&lt;p lang="ja" dir="ltr"&gt;Live2D EuclidをUNITYで見てみたら凄いことになってる。&lt;br&gt;なんかもっといい方法が思い付きそうで思い付かない。 &lt;a href="https://t.co/wcdaLibwGy"&gt;pic.twitter.com/wcdaLibwGy&lt;/a&gt;&lt;/p&gt;&amp;mdash; rukusu20XX (@rukusu2012) &lt;a href="https://twitter.com/rukusu2012/status/857935959572201472"&gt;April 28, 2017&lt;/a&gt;&lt;/blockquote&gt;
+
+&lt;script async src="//platform.twitter.com/widgets.js" charset="utf-8"&gt;&lt;/script&gt;
+
+&lt;h3&gt;2) Latent Doodle Space&lt;/h3&gt;
+&lt;iframe src="https://player.vimeo.com/video/3235882" width="640" height="432" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen&gt;&lt;/iframe&gt;
+
+&lt;p&gt;&lt;a href="https://vimeo.com/3235882"&gt;Latent Doodle Space (Eurographics 2006)&lt;/a&gt; from &lt;a href="https://vimeo.com/baxissimo"&gt;Bill Baxter&lt;/a&gt; on &lt;a href="https://vimeo.com"&gt;Vimeo&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;W. V. Baxter and K.-I. Anjyo. Latent doodle space. In EUROGRAPHICS, volume 25, pages 477–485, Vienna, Austria, September 4-8 2006.&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;入力ストロークの対応付けを行うアルゴリズムと、そこから low-dimensional latent space を構築することで、画像間の interpolation を行っている。特に SIGGRAPH 2014 の Course である &lt;a href="http://olm.co.jp/rd/research_event/scattered-data-interpolation-for-computer-graphics/?lang=en"&gt;Scattered Data Interpolation for Computer Graphics (OLM Digital R&amp;amp;D)&lt;/a&gt; は参考になる。Ken Anjyo 氏の研究は NPR に関連したものも多く興味深いものが多い。&lt;/p&gt;
+&lt;h3&gt;3) Learning a Manifold of Fonts&lt;/h3&gt;
+&lt;p&gt;&lt;em&gt;Neill D.F. Campbell and Jan Kautz. Learning a Manifold of Fonts. In ACM Transactions on Graphics (SIGGRAPH) 33(4), 2014&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;Learning a Manifold of Fonts は複数のフォントのキャラクターを２次元の latent space で操作し補間することができる。&lt;a href="http://vecg.cs.ucl.ac.uk/Projects/projects_fonts/projects_fonts.html"&gt;オンラインデモ&lt;/a&gt;でブラウザ上でアルファベットをマウスで様々に変化させることができ、たとえばセリフ体とサンセリフ体のあいの子のようなものを作り出すことができる。フォントはアウトラインを polyline で抽出され正規化される。同じアルファベットでも例えば g のようにフォントによってはトポロジが異なる場合だと補間することができず、別種として取り扱われる。複数のキャラクターを energy-based optimization を使って対応付け（同じ頂点数にする）、その後 generative non-linear manifold に GPLVM (Gaussian Process Latent Variable Models) を用いて次元削減する。&lt;/p&gt;
+&lt;h3&gt;4) Roto++&lt;/h3&gt;
+&lt;iframe width="560" height="315" src="https://www.youtube.com/embed/L1oIdrhUHk8?ecver=1" frameborder="0" allowfullscreen&gt;&lt;/iframe&gt;
+
+&lt;p&gt;&lt;em&gt;Wenbin Li and Fabio Viola and Jonathan Starck and Gabriel J. Brostow and Neill D.F. Campbell. Roto++: Accelerating Professional Rotoscoping using Shape Manifolds. ACM Transactions on Graphics (In proceeding of ACM SIGGRAPH'16)&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;ロトスコープは撮影した映像から frame by frame で形状を切り出し、アニメーションにする手法である。frame-by-frame であるため、かなり手間のかかる作業であり、コンピュータによる自動切り出しや補助技術が以前から開発されていたようである。&lt;a href="http://visual.cs.ucl.ac.uk/pubs/rotopp/"&gt;Roto++&lt;/a&gt; は shape manifold framework を使って作業補助する手法を提案している。ここでは polyline ではなく Bezier 曲線を low-dimensional latent space に GPLVM で落とし込んでいる。&lt;/p&gt;
+&lt;h3&gt;5) Sketch-RNN&lt;/h3&gt;
+&lt;blockquote class="twitter-tweet" data-lang="en"&gt;&lt;p lang="en" dir="ltr"&gt;A Neural Representation of Sketch Drawings. My work on generative vector image modelling with recurrent neural nets. &lt;a href="https://t.co/Iyp913D8IZ"&gt;https://t.co/Iyp913D8IZ&lt;/a&gt; &lt;a href="https://t.co/qO86nFnjG3"&gt;pic.twitter.com/qO86nFnjG3&lt;/a&gt;&lt;/p&gt;&amp;mdash; hardmaru (@hardmaru) &lt;a href="https://twitter.com/hardmaru/status/852310730321698816"&gt;April 13, 2017&lt;/a&gt;&lt;/blockquote&gt;
+
+&lt;script async src="//platform.twitter.com/widgets.js" charset="utf-8"&gt;&lt;/script&gt;
+
+&lt;p&gt;&lt;a href="https://quickdraw.withgoogle.com/"&gt;Quick, Draw!&lt;/a&gt; はスケッチを人間が 20 秒で描き NN がそれを判定する。つい最近そうして収集された&lt;a href="https://quickdraw.withgoogle.com/data"&gt;5000万件のデータセット&lt;/a&gt;が公開された。Sketch-RNN は Bidirectional RNN を用いたスケッチの生成モデルであり、 Google の Magenta プロジェクトの一部として現在公開されている。これまで紹介してきたものと違うのは、ストロークのデータにタイムスタンプが付けられており、時系列データとして扱っているところである。以下のツイートのように word2vec のようなアナロジー計算も行うことができる。&lt;/p&gt;
+&lt;blockquote class="twitter-tweet" data-lang="en"&gt;&lt;p lang="en" dir="ltr"&gt;Can machines learn to draw and generalize abstract concepts like people can? Cat-pig math suggests it&amp;#39;s possible! &lt;a href="https://t.co/DRQ1thnB8L"&gt;https://t.co/DRQ1thnB8L&lt;/a&gt; &lt;a href="https://t.co/4mgO89c9nS"&gt;pic.twitter.com/4mgO89c9nS&lt;/a&gt;&lt;/p&gt;&amp;mdash; Google Research (@googleresearch) &lt;a href="https://twitter.com/googleresearch/status/852567416399724545"&gt;April 13, 2017&lt;/a&gt;&lt;/blockquote&gt;
+
+&lt;script async src="//platform.twitter.com/widgets.js" charset="utf-8"&gt;&lt;/script&gt;
+
+&lt;h3&gt;6) Menpo&lt;/h3&gt;
+&lt;p&gt;&lt;a href="http://www.menpo.org/"&gt;Menpo&lt;/a&gt; は Python の deform library であり、活発に開発が行われている。しっかりと把握はできていないのだがどちらかというと raster images に対してトポロジーをフィットする機能が重点的に開発されているように見える。&lt;/p&gt;
+&lt;h3&gt;実装案&lt;/h3&gt;
+&lt;p&gt;いまのところ以下に示した画像のように Blender 上で ViewMap やオブジェクトの配置を latent space に落とし込み manifold をノード上で操作することで輪郭線を編集する方針で進めている。&lt;code&gt;Pot object&lt;/code&gt; という Python クラスを Siphon で定義し、そこに manifold 構築などの機能を加える予定である。&lt;/p&gt;
+&lt;p&gt;&lt;img alt="Pot object" src="/images/blog-20170527-pot.png"&gt;&lt;/p&gt;
+&lt;p&gt;BayesianGPLVM 等は Python だと &lt;a href="https://github.com/SheffieldML/GPy"&gt;GPy&lt;/a&gt; が使いやすそうなので、こちらを試し始めている。&lt;a href="https://github.com/GPflow/GPflow"&gt;GPflow&lt;/a&gt; という TensorFlow バックエンドを用いたものも登場しており、こちらは GPU を用いて高速化もできるそうなので、そのうち移行するかもしれない。&lt;/p&gt;
+&lt;p&gt;Blender アドオンをいろいろ調べたりして気づいたのは &lt;code&gt;SpaceImageEditor&lt;/code&gt; などのインターフェースを操作する際、Blender API だけではアクセスできない属性が存在するため &lt;a href="https://docs.python.org/3/library/ctypes.html"&gt;ctypes&lt;/a&gt; を使って直接メモリ上を参照するワザがよく使われていることだ。Blender のヘッダーファイルを参照し構造体を記述するため、プログラムのライセンスは自動的に GPL になる。Shape manipulation などのライブラリを用いたりするときにライセンスが競合したりすると困るので、以下のように &lt;code&gt;siphon-server&lt;/code&gt; というものとアドオンを分離する設計で進めようと考えている。すぐには分離しないかもしれないけど...&lt;/p&gt;
+&lt;p&gt;&lt;img alt="separation" src="/images/blog-20170527-separation.png"&gt;&lt;/p&gt;
+&lt;p&gt;アドオンとサーバは &lt;a href="http://www.grpc.io/"&gt;gRPC&lt;/a&gt; で通信するように上の画像だとあるが、もっと簡単なものから始めるかもしれない。また、個人的に Cycling '74 の &lt;a href="https://cycling74.com/products/max/"&gt;Max&lt;/a&gt; もよく使うので OSC でそのうちアドオンと通信できればと考えている（確か &lt;a href="https://github.com/nortikin/sverchok"&gt;Sverchok&lt;/a&gt; に OSC による通信ノードが存在している）。&lt;/p&gt;</content><category term="Blender"></category><category term="Freestyle"></category><category term="Siphon"></category></entry><entry><title>Siphon memo 4</title><link href="http://www.chino.coffee/siphon-memo-4.html" rel="alternate"></link><published>2017-05-02T09:40:00+09:00</published><updated>2017-05-02T09:40:00+09:00</updated><author><name>unikko</name></author><id>tag:www.chino.coffee,2017-05-02:/siphon-memo-4.html</id><summary type="html">&lt;p&gt;&lt;a href="http://www.chino.coffee/siphon-memo-3.html"&gt;前回&lt;/a&gt;に引き続き Blender における Freestyle の処理フローを調査している。今回は ViewMap の構築とキャッシュあたりについて調べてみよう。&lt;/p&gt;
 &lt;h3&gt;1. Controller::Controller()&lt;/h3&gt;
 &lt;p&gt;まずは &lt;code&gt;Controller::Controller()&lt;/code&gt; の実装を見てみよう。&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;namespace&lt;/span&gt; &lt;span class="n"&gt;Freestyle&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
