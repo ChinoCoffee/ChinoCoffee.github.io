@@ -85,10 +85,11 @@
 <h3>6) Menpo</h3>
 <p><a href="http://www.menpo.org/">Menpo</a> は Python の deform library であり、活発に開発が行われている。しっかりと把握はできていないのだがどちらかというと raster images に対してトポロジーをフィットする機能が重点的に開発されているように見える。</p>
 <h3>実装案</h3>
-<p>いまのところ以下に示した画像のように Blender 上で ViewMap やオブジェクトの配置を latent space に落とし込み manifold をノード上で操作することで輪郭線を編集する方針で進めている。<code>Pot object</code> という Python クラスを Siphon で定義し、そこに manifold 構築などの機能を加える予定である。</p>
+<p>Siphon では 2.5D Cartoon Models のような 2D vector の３次元空間への配置手法と GPLVM による shape manifold を使った Freestyle の線画 (ViewMap) の編集を使おうと考えている。いまのところ以下に示した画像のように Blender 上で ViewMap やオブジェクトの配置を latent space に落とし込み manifold をノード上で操作することで輪郭線を編集する方針で進めている。<code>Pot object</code> という Python クラスを Siphon で定義し、そこに manifold 構築などの機能を加える予定である。</p>
 <p><img alt="Pot object" src="/images/blog-20170527-pot.png"></p>
 <p>BayesianGPLVM 等は Python だと <a href="https://github.com/SheffieldML/GPy">GPy</a> が使いやすそうなので、こちらを試し始めている。<a href="https://github.com/GPflow/GPflow">GPflow</a> という TensorFlow バックエンドを用いたものも登場しており、こちらは GPU を用いて高速化もできるそうなので、そのうち移行するかもしれない。</p>
-<p>Blender アドオンをいろいろ調べたりして気づいたのは <code>SpaceImageEditor</code> などのインターフェースを操作する際、Blender API だけではアクセスできない属性が存在するため <a href="https://docs.python.org/3/library/ctypes.html">ctypes</a> を使って直接メモリ上を参照するワザがよく使われていることだ。Blender のヘッダーファイルを参照し構造体を記述するため、プログラムのライセンスは自動的に GPL になる。Shape manipulation などのライブラリを用いたりするときにライセンスが競合したりすると困るので、以下のように <code>siphon-server</code> というものとアドオンを分離する設計で進めようと考えている。すぐには分離しないかもしれないけど...</p>
+<p>Blender アドオンをいろいろ調べたりして気づいたのは <code>SpaceImageEditor</code> などのインターフェースを操作する際、Blender API だけではアクセスできない属性が存在するため <a href="https://docs.python.org/3/library/ctypes.html">ctypes</a> を使って直接メモリ上を参照するワザがよく使われていることだ。Blender のヘッダーファイルを参照し構造体を記述するため、プログラムのライセンスは自動的に GPL になる。Shape manipulation などのライブラリを用いたりするときにライセンスが競合したりすると困るので、以下のように <code>siphon-server</code> というものとアドオンを分離する設計で進めようと考えている。すぐには分離しないかもしれないが...</p>
+<p>輪郭線編集のときに問題になるのは Z-order である。ここは Freestyle で QI (quantitative invisibility) の情報が取れるので、この情報と 2D Vector の Boolean operations を使い解決できないかと考えている。</p>
 <p><img alt="separation" src="/images/blog-20170527-separation.png"></p>
 <p>アドオンとサーバは <a href="http://www.grpc.io/">gRPC</a> で通信するように上の画像だとあるが、もっと簡単なものから始めるかもしれない。また、個人的に Cycling '74 の <a href="https://cycling74.com/products/max/">Max</a> もよく使うので OSC でそのうちアドオンと通信できればと考えている（確か <a href="https://github.com/nortikin/sverchok">Sverchok</a> に OSC による通信ノードが存在している）。</p>
                 <div class="clear"></div>
