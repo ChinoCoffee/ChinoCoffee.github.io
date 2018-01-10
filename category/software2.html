@@ -21,7 +21,7 @@
             <ul>
 
                 <li class="ephemeral selected"><a href="http://www.chino.coffee/category/software2.html">Software</a></li>
-                <li><a href="/blog.html">blog</li>
+                <li><a href="/archives.html">blog</li>
                 <li><a></a></li>
 
                 <li><a href="http://www.chino.coffee/pages/about.html">about</a></li>
@@ -36,288 +36,63 @@
         <hr />
     </header>
     <div id="wrapper">
-        <div id="content">            <h4 class="date">2017-04-24</h4>
+        <div id="content">
+            <h4 class="date">2017-05-27</h4>
 
             <article class="post">
                 <h2 class="title">
-                    <a href="http://www.chino.coffee/siphon-memo-3.html" rel="bookmark" title="Permanent Link to &quot;Siphon memo 3&quot;">Siphon memo 3</a>
+                    <a href="http://www.chino.coffee/siphon-memo-5-shape-manipulation.html" rel="bookmark" title="Permanent Link to &quot;Siphon memo 5 - shape manipulation&quot;">Siphon memo 5 - shape manipulation</a>
                 </h2>
 
-                <p>Siphon を開発するにあたって Blender における Freestyle の処理フローを調査している。Blender のソースコードを引用しつつ、Freestyle の関数がどのように呼び出されているのかざっくり追ってみよう。</p>
-<h3>1. bpy.ops.render.render()</h3>
-<p>基本的に Freestyle はレンダリング処理中に動作する。そこで <code>bpy.ops.render.render()</code> の処理を見てみよう。<code>bpy.ops.render</code> は一見 Python の submodule のように見える。</p>
-<div class="highlight"><pre><span></span><span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">bpy</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="n">bpy</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">render</span>
-<span class="o">&lt;</span><span class="n">module</span> <span class="n">like</span> <span class="k">class</span> <span class="err">&#39;</span><span class="nc">bpy</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">render</span><span class="s1">&#39;&gt;</span>
-</pre></div>
+                <p>現在開発している Blender-addon である Siphon は Freestyle から抽出した輪郭線を NodeTree 上でパラメータを変更しながらインタラクティブに編集するのが一つの目標である。
+今回は shape manipulation についていくつか調査し、Siphon への実装案についてメモする。</p>
+<h3>1) 2.5D Cartoon Models</h3>
+<iframe src="https://player.vimeo.com/video/11941007?color=ff9933" width="640" height="560" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
 
+<p><a href="https://vimeo.com/11941007">MIT 2.5D Cartoon Models</a> from <a href="https://vimeo.com/lesterbanks">lester banks</a> on <a href="https://vimeo.com">Vimeo</a>.</p>
 
-<p><code>module like class</code> という見慣れないクラスのようだ。<code>help()</code> で調べてみる。</p>
-<div class="highlight"><pre><span></span><span class="o">&gt;&gt;&gt;</span> <span class="nx">help</span><span class="p">(</span><span class="nx">bpy</span><span class="p">.</span><span class="nx">ops</span><span class="p">.</span><span class="nx">render</span><span class="p">)</span>
-<span class="nx">Help</span> <span class="nx">on</span> <span class="nx">BPyOpsSubMod</span> <span class="k">in</span> <span class="kr">module</span> <span class="nx">bpy.ops</span> <span class="nx">object</span>:
+<p><a href="https://dspace.mit.edu/handle/1721.1/73111"><em>Alec Rivers, Takeo Igarashi, and Frédo Durand. 2010. 2.5D cartoon models. ACM Transactions on Graphics 29, 4, Article 59 (July 2010), 7 pages.</em></a></p>
+<p>この研究は 2D vector を三次元空間に配置し、擬似的なレンダリングを行うことによって様々な方向からキャラクターを描画できるようにする。上下左右などいくつかの方向の 2D vector を準備し対応付けしている。3Dモデルの作成は必要なく絵を描くことで立体的表現を構築できるメリットがある。また 3Dモデルでは不可能に近いイラストライクな表現を実現することができる。ちなみに Frédo Durand 氏は Freestyle の研究にも携わった人物である。</p>
+<p><a href="http://www.live2d.com/en/products/euclid">Live2D Euclid</a> は極めてイラストライクで自然なキャラクターを表現することができるが、顔部分の基本的な動作原理は 2.5D Cartoon Models とほぼ同じではないかと考えている。</p>
+<blockquote class="twitter-tweet" data-lang="en"><p lang="ja" dir="ltr">Live2D EuclidをUNITYで見てみたら凄いことになってる。<br>なんかもっといい方法が思い付きそうで思い付かない。 <a href="https://t.co/wcdaLibwGy">pic.twitter.com/wcdaLibwGy</a></p>&mdash; rukusu20XX (@rukusu2012) <a href="https://twitter.com/rukusu2012/status/857935959572201472">April 28, 2017</a></blockquote>
 
-<span class="kt">class</span> <span class="nx">BPyOpsSubMod</span><span class="p">(</span><span class="nx">builtins</span><span class="p">.</span><span class="nx">object</span><span class="p">)</span>
- <span class="o">|</span>  <span class="nx">Utility</span> <span class="kr">class</span> <span class="nx">to</span> <span class="nx">fake</span> <span class="nx">submodules</span><span class="p">.</span>
- <span class="o">|</span>
- <span class="o">|</span>  <span class="nx">eg</span><span class="p">.</span> <span class="nx">bpy</span><span class="p">.</span><span class="nx">ops</span><span class="p">.</span><span class="nx">object</span>
+<script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
 
- <span class="p">...</span>
-</pre></div>
+<h3>2) Latent Doodle Space</h3>
+<iframe src="https://player.vimeo.com/video/3235882" width="640" height="432" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
 
+<p><a href="https://vimeo.com/3235882">Latent Doodle Space (Eurographics 2006)</a> from <a href="https://vimeo.com/baxissimo">Bill Baxter</a> on <a href="https://vimeo.com">Vimeo</a>.</p>
 
-<p>すると <code>fake submodules</code> という興味深い文字列が出力される。どうやらただのクラスではないようだ。実際のコード片については <a href="https://git.blender.org/gitweb/gitweb.cgi/blender.git/blob/HEAD:/release/scripts/modules/bpy/ops.py">/release/scripts/modules/bpy/ops.py</a> にある。読んでみると <code>_bpy</code> という C-extension の中身を Python submodule に見せかけてアクセスできるようにしたものらしい。この C-extension は <a href="https://git.blender.org/gitweb/gitweb.cgi/blender.git/blob/HEAD:/source/blender/python/intern/bpy_operator.c#l467">/source/blender/python/intern/bpy_operator.c</a> に内容が記述されている。</p>
-<p><code>render.render</code> のような処理はどうやら OperatorType (<code>OT</code>) と呼ばれているらしく、<code>bpy_operator.c</code> の <a href="https://git.blender.org/gitweb/gitweb.cgi/blender.git/blob/HEAD:/source/blender/python/intern/bpy_operator.c#l169">L.169</a> のように、</p>
-<div class="highlight"><pre><span></span><span class="n">ot</span> <span class="o">=</span> <span class="n">WM_operatortype_find</span><span class="p">(</span><span class="n">opname</span><span class="p">,</span> <span class="nb">true</span><span class="p">);</span>
-</pre></div>
+<p><em>W. V. Baxter and K.-I. Anjyo. Latent doodle space. In EUROGRAPHICS, volume 25, pages 477–485, Vienna, Austria, September 4-8 2006.</em></p>
+<p>入力ストロークの対応付けを行うアルゴリズムと、そこから low-dimensional latent space を構築することで、画像間の interpolation を行っている。特に SIGGRAPH 2014 の Course である <a href="http://olm.co.jp/rd/research_event/scattered-data-interpolation-for-computer-graphics/?lang=en">Scattered Data Interpolation for Computer Graphics (OLM Digital R&amp;D)</a> は参考になる。Ken Anjyo 氏の研究は NPR に関連したものも多く興味深いものが多い。</p>
+<h3>3) Learning a Manifold of Fonts</h3>
+<p><em>Neill D.F. Campbell and Jan Kautz. Learning a Manifold of Fonts. In ACM Transactions on Graphics (SIGGRAPH) 33(4), 2014</em></p>
+<p>Learning a Manifold of Fonts は複数のフォントのキャラクターを２次元の latent space で操作し補間することができる。<a href="http://vecg.cs.ucl.ac.uk/Projects/projects_fonts/projects_fonts.html">オンラインデモ</a>でブラウザ上でアルファベットをマウスで様々に変化させることができ、たとえばセリフ体とサンセリフ体のあいの子のようなものを作り出すことができる。フォントはアウトラインを polyline で抽出され正規化される。同じアルファベットでも例えば g のようにフォントによってはトポロジが異なる場合だと補間することができず、別種として取り扱われる。複数のキャラクターを energy-based optimization を使って対応付け（同じ頂点数にする）、その後 generative non-linear manifold に GPLVM (Gaussian Process Latent Variable Models) を用いて次元削減する。</p>
+<h3>4) Roto++</h3>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/L1oIdrhUHk8?ecver=1" frameborder="0" allowfullscreen></iframe>
 
+<p><em>Wenbin Li and Fabio Viola and Jonathan Starck and Gabriel J. Brostow and Neill D.F. Campbell. Roto++: Accelerating Professional Rotoscoping using Shape Manifolds. ACM Transactions on Graphics (In proceeding of ACM SIGGRAPH'16)</em></p>
+<p>ロトスコープは撮影した映像から frame by frame で形状を切り出し、アニメーションにする手法である。frame-by-frame であるため、かなり手間のかかる作業であり、コンピュータによる自動切り出しや補助技術が以前から開発されていたようである。<a href="http://visual.cs.ucl.ac.uk/pubs/rotopp/">Roto++</a> は shape manifold framework を使って作業補助する手法を提案している。ここでは polyline ではなく Bezier 曲線を low-dimensional latent space に GPLVM で落とし込んでいる。</p>
+<h3>5) Sketch-RNN</h3>
+<blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">A Neural Representation of Sketch Drawings. My work on generative vector image modelling with recurrent neural nets. <a href="https://t.co/Iyp913D8IZ">https://t.co/Iyp913D8IZ</a> <a href="https://t.co/qO86nFnjG3">pic.twitter.com/qO86nFnjG3</a></p>&mdash; hardmaru (@hardmaru) <a href="https://twitter.com/hardmaru/status/852310730321698816">April 13, 2017</a></blockquote>
 
-<p>という関数で呼び出されるようだ。おそらく <code>opname</code> には <code>render.render</code> という文字列が入りそうである。<code>WM_operatortype_find</code> 関数は <a href="https://git.blender.org/gitweb/gitweb.cgi/blender.git/blob/HEAD:/source/blender/windowmanager/intern/wm_operators.c#l128">/blender/windowmanager/intern/wm_operators.c</a> に実態がある。</p>
-<div class="highlight"><pre><span></span><span class="n">wmOperatorType</span> <span class="o">*</span><span class="nf">WM_operatortype_find</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">idname</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">quiet</span><span class="p">)</span>
-<span class="p">{</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">idname</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="p">{</span>
-        <span class="n">wmOperatorType</span> <span class="o">*</span><span class="n">ot</span><span class="p">;</span>
+<script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-        <span class="cm">/* needed to support python style names without the _OT_ syntax */</span>
-        <span class="kt">char</span> <span class="n">idname_bl</span><span class="p">[</span><span class="n">OP_MAX_TYPENAME</span><span class="p">];</span>
-        <span class="n">WM_operator_bl_idname</span><span class="p">(</span><span class="n">idname_bl</span><span class="p">,</span> <span class="n">idname</span><span class="p">);</span>
+<p><a href="https://quickdraw.withgoogle.com/">Quick, Draw!</a> はスケッチを人間が 20 秒で描き NN がそれを判定する。つい最近そうして収集された<a href="https://quickdraw.withgoogle.com/data">5000万件のデータセット</a>が公開された。Sketch-RNN は Bidirectional RNN を用いたスケッチの生成モデルであり、 Google の Magenta プロジェクトの一部として現在公開されている。これまで紹介してきたものと違うのは、ストロークのデータにタイムスタンプが付けられており、時系列データとして扱っているところである。以下のツイートのように word2vec のようなアナロジー計算も行うことができる。</p>
+<blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">Can machines learn to draw and generalize abstract concepts like people can? Cat-pig math suggests it&#39;s possible! <a href="https://t.co/DRQ1thnB8L">https://t.co/DRQ1thnB8L</a> <a href="https://t.co/4mgO89c9nS">pic.twitter.com/4mgO89c9nS</a></p>&mdash; Google Research (@googleresearch) <a href="https://twitter.com/googleresearch/status/852567416399724545">April 13, 2017</a></blockquote>
 
-        <span class="n">ot</span> <span class="o">=</span> <span class="n">BLI_ghash_lookup</span><span class="p">(</span><span class="n">global_ops_hash</span><span class="p">,</span> <span class="n">idname_bl</span><span class="p">);</span>
-        <span class="k">if</span> <span class="p">(</span><span class="n">ot</span><span class="p">)</span> <span class="p">{</span>
-            <span class="k">return</span> <span class="n">ot</span><span class="p">;</span>
-        <span class="p">}</span>
-</pre></div>
+<script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-
-<p>さて、ここで <code>WM_operator_bl_idname</code> 関数は同じファイルに、</p>
-<div class="highlight"><pre><span></span><span class="cm">/* some.op -&gt; SOME_OT_op */</span>
-<span class="kt">void</span> <span class="n">WM_operator_bl_idname</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">to</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">from</span><span class="p">)</span>
-</pre></div>
-
-
-<p>とある。つまり <code>render.render</code> はおそらく <code>RENDER_OT_render</code> に変換され <code>WM_operatortype_find</code> 関数内部の <code>BLI_ghash_lookup</code> で検索が行われるようだ。予想通り <a href="https://git.blender.org/gitweb/gitweb.cgi/blender.git/blob/HEAD:/source/blender/editors/render/render_internal.c#l997">/editors/render/render_internal.c</a> に <code>RENDER_OT_render</code> という関数を見つけた。</p>
-<div class="highlight"><pre><span></span><span class="cm">/* contextual render, using current scene, view3d? */</span>
-<span class="kt">void</span> <span class="nf">RENDER_OT_render</span><span class="p">(</span><span class="n">wmOperatorType</span> <span class="o">*</span><span class="n">ot</span><span class="p">)</span>
-<span class="p">{</span>
-    <span class="n">PropertyRNA</span> <span class="o">*</span><span class="n">prop</span><span class="p">;</span>
-
-    <span class="cm">/* identifiers */</span>
-    <span class="n">ot</span><span class="o">-&gt;</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;Render&quot;</span><span class="p">;</span>
-    <span class="n">ot</span><span class="o">-&gt;</span><span class="n">description</span> <span class="o">=</span> <span class="s">&quot;Render active scene&quot;</span><span class="p">;</span>
-    <span class="n">ot</span><span class="o">-&gt;</span><span class="n">idname</span> <span class="o">=</span> <span class="s">&quot;RENDER_OT_render&quot;</span><span class="p">;</span>
-
-    <span class="cm">/* api callbacks */</span>
-    <span class="n">ot</span><span class="o">-&gt;</span><span class="n">invoke</span> <span class="o">=</span> <span class="n">screen_render_invoke</span><span class="p">;</span>
-    <span class="n">ot</span><span class="o">-&gt;</span><span class="n">modal</span> <span class="o">=</span> <span class="n">screen_render_modal</span><span class="p">;</span>
-    <span class="n">ot</span><span class="o">-&gt;</span><span class="n">cancel</span> <span class="o">=</span> <span class="n">screen_render_cancel</span><span class="p">;</span>
-    <span class="n">ot</span><span class="o">-&gt;</span><span class="n">exec</span> <span class="o">=</span> <span class="n">screen_render_exec</span><span class="p">;</span>
-</pre></div>
-
-
-<p>さて、上のコード片を読んだ限りでは <code>/* api callbacks */</code> 以下の行が処理の中心になりそうだ。試しに同じファイルに含まれている <code>ot-&gt;exec</code> の <code>screen_render_exec</code> 関数を見てみる。</p>
-<div class="highlight"><pre><span></span><span class="cm">/* executes blocking render */</span>
-<span class="k">static</span> <span class="kt">int</span> <span class="nf">screen_render_exec</span><span class="p">(</span><span class="n">bContext</span> <span class="o">*</span><span class="n">C</span><span class="p">,</span> <span class="n">wmOperator</span> <span class="o">*</span><span class="n">op</span><span class="p">)</span>
-<span class="p">{</span>
-    <span class="n">Scene</span> <span class="o">*</span><span class="n">scene</span> <span class="o">=</span> <span class="n">CTX_data_scene</span><span class="p">(</span><span class="n">C</span><span class="p">);</span>
-    <span class="n">SceneRenderLayer</span> <span class="o">*</span><span class="n">srl</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
-    <span class="n">Render</span> <span class="o">*</span><span class="n">re</span><span class="p">;</span>
-    <span class="n">Image</span> <span class="o">*</span><span class="n">ima</span><span class="p">;</span>
-    <span class="n">View3D</span> <span class="o">*</span><span class="n">v3d</span> <span class="o">=</span> <span class="n">CTX_wm_view3d</span><span class="p">(</span><span class="n">C</span><span class="p">);</span>
-    <span class="n">Main</span> <span class="o">*</span><span class="n">mainp</span> <span class="o">=</span> <span class="n">CTX_data_main</span><span class="p">(</span><span class="n">C</span><span class="p">);</span>
-    <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">lay_override</span><span class="p">;</span>
-    <span class="k">const</span> <span class="kt">bool</span> <span class="n">is_animation</span> <span class="o">=</span> <span class="n">RNA_boolean_get</span><span class="p">(</span><span class="n">op</span><span class="o">-&gt;</span><span class="n">ptr</span><span class="p">,</span> <span class="s">&quot;animation&quot;</span><span class="p">);</span>
-    <span class="k">const</span> <span class="kt">bool</span> <span class="n">is_write_still</span> <span class="o">=</span> <span class="n">RNA_boolean_get</span><span class="p">(</span><span class="n">op</span><span class="o">-&gt;</span><span class="n">ptr</span><span class="p">,</span> <span class="s">&quot;write_still&quot;</span><span class="p">);</span>
-
-    <span class="c1">// ...</span>
-
-    <span class="n">re</span> <span class="o">=</span> <span class="n">RE_NewRender</span><span class="p">(</span><span class="n">scene</span><span class="o">-&gt;</span><span class="n">id</span><span class="p">.</span><span class="n">name</span><span class="p">);</span>
-
-    <span class="c1">// ...</span>
-
-    <span class="n">BLI_begin_threaded_malloc</span><span class="p">();</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">is_animation</span><span class="p">)</span>
-        <span class="n">RE_BlenderAnim</span><span class="p">(</span><span class="n">re</span><span class="p">,</span> <span class="n">mainp</span><span class="p">,</span> <span class="n">scene</span><span class="p">,</span> <span class="n">camera_override</span><span class="p">,</span> <span class="n">lay_override</span><span class="p">,</span> <span class="n">scene</span><span class="o">-&gt;</span><span class="n">r</span><span class="p">.</span><span class="n">sfra</span><span class="p">,</span> <span class="n">scene</span><span class="o">-&gt;</span><span class="n">r</span><span class="p">.</span><span class="n">efra</span><span class="p">,</span> <span class="n">scene</span><span class="o">-&gt;</span><span class="n">r</span><span class="p">.</span><span class="n">frame_step</span><span class="p">);</span>
-    <span class="k">else</span>
-        <span class="n">RE_BlenderFrame</span><span class="p">(</span><span class="n">re</span><span class="p">,</span> <span class="n">mainp</span><span class="p">,</span> <span class="n">scene</span><span class="p">,</span> <span class="n">srl</span><span class="p">,</span> <span class="n">camera_override</span><span class="p">,</span> <span class="n">lay_override</span><span class="p">,</span> <span class="n">scene</span><span class="o">-&gt;</span><span class="n">r</span><span class="p">.</span><span class="n">cfra</span><span class="p">,</span> <span class="n">is_write_still</span><span class="p">);</span>
-    <span class="n">BLI_end_threaded_malloc</span><span class="p">();</span>
-
-    <span class="c1">// ...</span>
-
-    <span class="k">return</span> <span class="n">OPERATOR_FINISHED</span><span class="p">;</span>
-<span class="p">}</span>
-</pre></div>
-
-
-<p>実際のレンダリングは１フレームを描画する場合 <code>RE_BlenderFrame</code>、アニメーションの場合 <code>RE_BlenderAnim</code> で行われるみたいだ。<code>RE_BlenderFrame</code> は <a href="https://git.blender.org/gitweb/gitweb.cgi/blender.git/blob/HEAD:/source/blender/render/intern/source/pipeline.c#l3202">/render/intern/source/pipeline.c</a> に実装がある。この <code>pipeline.c</code> でようやく <code>Freestyle</code> の文字が出現し始める。</p>
-<h3>2. /render/intern/source/pipeline.c</h3>
-<p><code>pipeline.c</code> はレンダリング処理が主に記述された 4,000 行ほどのファイルである。ここでは <a href="https://git.blender.org/gitweb/gitweb.cgi/blender.git/blob/HEAD:/source/blender/freestyle/FRS_freestyle.h">/freestyle/FRS_freestyle.h</a> がインクルードされており <code>pipeline.c</code> のいくつかの関数で様々な Freestyle の関数が呼び出されている。<code>FRS_freestyle.h</code> の関数名には <code>FRS_</code> という prefix が基本的に付けられており、この prefix で Blender のソースコード全体を検索すると Freestyle が外部から呼び出されている場面も見つけることができるので便利である。</p>
-<p><code>pipeline.c</code> の中で実際に呼び出されているのは以下の7つのようだ。</p>
-<div class="highlight"><pre><span></span><span class="n">FRS_init_stroke_renderer</span><span class="p">(</span><span class="n">re</span><span class="p">);</span>
-<span class="n">FRS_begin_stroke_rendering</span><span class="p">(</span><span class="n">re</span><span class="p">);</span>
-<span class="n">FRS_do_stroke_rendering</span><span class="p">(</span><span class="n">re</span><span class="p">,</span> <span class="n">srl</span><span class="p">,</span> <span class="n">render</span><span class="p">);</span>
-<span class="n">FRS_end_stroke_rendering</span><span class="p">(</span><span class="n">re</span><span class="p">);</span>
-
-<span class="n">FRS_composite_result</span><span class="p">(</span><span class="n">re</span><span class="p">,</span> <span class="n">srl</span><span class="p">,</span> <span class="n">freestyle_render</span><span class="p">);</span>
-
-<span class="n">FRS_is_freestyle_enabled</span><span class="p">(</span><span class="n">srl</span><span class="p">);</span>
-<span class="n">FRS_exit</span><span class="p">();</span>
-</pre></div>
-
-
-<p>すべての関数は <a href="https://git.blender.org/gitweb/gitweb.cgi/blender.git/blob/HEAD:/source/blender/freestyle/intern/blender_interface/FRS_freestyle.cpp#l573">/freestyle/intern/blender_interface/FRS_freestyle.cpp</a> に実装がある。ちなみに <code>/freestyle/</code> 内で全ソースコードで <code>_OT_</code> とつく関数を検索したところヒットしなかったため OperatorType 自体は存在しないようだ。</p>
-<p>呼び出されている関数の中で <code>stroke</code> が名前に含まれるものについて実装を少し見てみよう。</p>
-<div class="highlight"><pre><span></span><span class="kt">void</span> <span class="nf">FRS_init_stroke_renderer</span><span class="p">(</span><span class="n">Render</span> <span class="o">*</span><span class="n">re</span><span class="p">)</span>
-<span class="p">{</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">G</span><span class="p">.</span><span class="n">debug</span> <span class="o">&amp;</span> <span class="n">G_DEBUG_FREESTYLE</span><span class="p">)</span> <span class="p">{</span>
-        <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
-        <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&quot;#===============================================================&quot;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
-        <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&quot;#  Freestyle&quot;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
-        <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&quot;#===============================================================&quot;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
-    <span class="p">}</span>
-
-    <span class="n">init_view</span><span class="p">(</span><span class="n">re</span><span class="p">);</span>
-
-    <span class="n">controller</span><span class="o">-&gt;</span><span class="n">ResetRenderCount</span><span class="p">();</span>
-<span class="p">}</span>
-</pre></div>
-
-
-<div class="highlight"><pre><span></span><span class="kt">void</span> <span class="nf">FRS_begin_stroke_rendering</span><span class="p">(</span><span class="n">Render</span> <span class="o">*</span><span class="n">re</span><span class="p">)</span>
-<span class="p">{</span>
-    <span class="n">init_camera</span><span class="p">(</span><span class="n">re</span><span class="p">);</span>
-<span class="p">}</span>
-</pre></div>
-
-
-<div class="highlight"><pre><span></span><span class="n">Render</span> <span class="o">*</span><span class="nf">FRS_do_stroke_rendering</span><span class="p">(</span><span class="n">Render</span> <span class="o">*</span><span class="n">re</span><span class="p">,</span> <span class="n">SceneRenderLayer</span> <span class="o">*</span><span class="n">srl</span><span class="p">,</span> <span class="kt">int</span> <span class="n">render</span><span class="p">)</span>
-<span class="p">{</span>
-    <span class="n">Render</span> <span class="o">*</span><span class="n">freestyle_render</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
-
-    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">render</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">controller</span><span class="o">-&gt;</span><span class="n">RenderStrokes</span><span class="p">(</span><span class="n">re</span><span class="p">,</span> <span class="nb">false</span><span class="p">);</span>
-
-    <span class="n">RenderMonitor</span> <span class="n">monitor</span><span class="p">(</span><span class="n">re</span><span class="p">);</span>
-    <span class="n">controller</span><span class="o">-&gt;</span><span class="n">setRenderMonitor</span><span class="p">(</span><span class="o">&amp;</span><span class="n">monitor</span><span class="p">);</span>
-    <span class="n">controller</span><span class="o">-&gt;</span><span class="n">setViewMapCache</span><span class="p">((</span><span class="n">srl</span><span class="o">-&gt;</span><span class="n">freestyleConfig</span><span class="p">.</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">FREESTYLE_VIEW_MAP_CACHE</span><span class="p">)</span> <span class="o">?</span> <span class="nb">true</span> <span class="o">:</span> <span class="nb">false</span><span class="p">);</span>
-
-    <span class="k">if</span> <span class="p">(</span><span class="n">G</span><span class="p">.</span><span class="n">debug</span> <span class="o">&amp;</span> <span class="n">G_DEBUG_FREESTYLE</span><span class="p">)</span> <span class="p">{</span>
-        <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
-        <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&quot;----------------------------------------------------------&quot;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
-        <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&quot;|  &quot;</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">re</span><span class="o">-&gt;</span><span class="n">scene</span><span class="o">-&gt;</span><span class="n">id</span><span class="p">.</span><span class="n">name</span> <span class="o">+</span> <span class="mi">2</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="s">&quot;|&quot;</span> <span class="o">&lt;&lt;</span> <span class="n">srl</span><span class="o">-&gt;</span><span class="n">name</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
-        <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&quot;----------------------------------------------------------&quot;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
-    <span class="p">}</span>
-
-    <span class="c1">// prepare Freestyle:</span>
-    <span class="c1">//   - load mesh</span>
-    <span class="c1">//   - add style modules</span>
-    <span class="c1">//   - set parameters</span>
-    <span class="c1">//   - compute view map</span>
-    <span class="n">prepare</span><span class="p">(</span><span class="n">re</span><span class="p">,</span> <span class="n">srl</span><span class="p">);</span>
-
-    <span class="k">if</span> <span class="p">(</span><span class="n">re</span><span class="o">-&gt;</span><span class="n">test_break</span><span class="p">(</span><span class="n">re</span><span class="o">-&gt;</span><span class="n">tbh</span><span class="p">))</span> <span class="p">{</span>
-        <span class="n">controller</span><span class="o">-&gt;</span><span class="n">CloseFile</span><span class="p">();</span>
-        <span class="k">if</span> <span class="p">(</span><span class="n">G</span><span class="p">.</span><span class="n">debug</span> <span class="o">&amp;</span> <span class="n">G_DEBUG_FREESTYLE</span><span class="p">)</span> <span class="p">{</span>
-            <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&quot;Break&quot;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
-        <span class="p">}</span>
-    <span class="p">}</span>
-    <span class="k">else</span> <span class="p">{</span>
-        <span class="c1">// render and composite Freestyle result</span>
-        <span class="k">if</span> <span class="p">(</span><span class="n">controller</span><span class="o">-&gt;</span><span class="n">_ViewMap</span><span class="p">)</span> <span class="p">{</span>
-            <span class="c1">// render strokes</span>
-            <span class="n">re</span><span class="o">-&gt;</span><span class="n">i</span><span class="p">.</span><span class="n">infostr</span> <span class="o">=</span> <span class="n">IFACE_</span><span class="p">(</span><span class="s">&quot;Freestyle: Stroke rendering&quot;</span><span class="p">);</span>
-            <span class="n">re</span><span class="o">-&gt;</span><span class="n">stats_draw</span><span class="p">(</span><span class="n">re</span><span class="o">-&gt;</span><span class="n">sdh</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">re</span><span class="o">-&gt;</span><span class="n">i</span><span class="p">);</span>
-            <span class="n">re</span><span class="o">-&gt;</span><span class="n">i</span><span class="p">.</span><span class="n">infostr</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
-            <span class="n">g_freestyle</span><span class="p">.</span><span class="n">scene</span> <span class="o">=</span> <span class="n">re</span><span class="o">-&gt;</span><span class="n">scene</span><span class="p">;</span>
-            <span class="kt">int</span> <span class="n">strokeCount</span> <span class="o">=</span> <span class="n">controller</span><span class="o">-&gt;</span><span class="n">DrawStrokes</span><span class="p">();</span>
-            <span class="k">if</span> <span class="p">(</span><span class="n">strokeCount</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-                <span class="n">freestyle_render</span> <span class="o">=</span> <span class="n">controller</span><span class="o">-&gt;</span><span class="n">RenderStrokes</span><span class="p">(</span><span class="n">re</span><span class="p">,</span> <span class="nb">true</span><span class="p">);</span>
-            <span class="p">}</span>
-            <span class="n">controller</span><span class="o">-&gt;</span><span class="n">CloseFile</span><span class="p">();</span>
-            <span class="n">g_freestyle</span><span class="p">.</span><span class="n">scene</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
-
-            <span class="c1">// composite result</span>
-            <span class="k">if</span> <span class="p">(</span><span class="n">freestyle_render</span><span class="p">)</span> <span class="p">{</span>
-                <span class="n">FRS_composite_result</span><span class="p">(</span><span class="n">re</span><span class="p">,</span> <span class="n">srl</span><span class="p">,</span> <span class="n">freestyle_render</span><span class="p">);</span>
-                <span class="n">RE_FreeRenderResult</span><span class="p">(</span><span class="n">freestyle_render</span><span class="o">-&gt;</span><span class="n">result</span><span class="p">);</span>
-                <span class="n">freestyle_render</span><span class="o">-&gt;</span><span class="n">result</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
-            <span class="p">}</span>
-        <span class="p">}</span>
-    <span class="p">}</span>
-
-    <span class="k">return</span> <span class="n">freestyle_render</span><span class="p">;</span>
-<span class="p">}</span>
-</pre></div>
-
-
-<div class="highlight"><pre><span></span><span class="kt">void</span> <span class="nf">FRS_end_stroke_rendering</span><span class="p">(</span><span class="n">Render</span> <span class="o">*</span> <span class="cm">/*re*/</span><span class="p">)</span>
-<span class="p">{</span>
-    <span class="c1">// clear canvas</span>
-    <span class="n">controller</span><span class="o">-&gt;</span><span class="n">Clear</span><span class="p">();</span>
-<span class="p">}</span>
-</pre></div>
-
-
-<p>よく見かける <code>controller</code> というのは <a href="https://git.blender.org/gitweb/gitweb.cgi/blender.git/blob/HEAD:/source/blender/freestyle/intern/application/Controller.cpp">/freestyle/intern/application/Controller.h</a> で定義されている。この <code>controller</code> には <code>FEdgeXDetector</code> (<code>FEdge</code> は <code>feature edge</code> を指す)や <code>ViewMapBuilder</code> などの処理機構が定義されている。<code>FRS_freestyle.cpp</code> の <code>FRS_initialize()</code> に <code>controller</code> の初期化処理が記述されている。</p>
-<div class="highlight"><pre><span></span><span class="kt">void</span> <span class="nf">FRS_initialize</span><span class="p">()</span>
-<span class="p">{</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">freestyle_is_initialized</span><span class="p">)</span>
-        <span class="k">return</span><span class="p">;</span>
-
-    <span class="n">pathconfig</span> <span class="o">=</span> <span class="n">new</span> <span class="n">Config</span><span class="o">::</span><span class="n">Path</span><span class="p">;</span>
-    <span class="n">controller</span> <span class="o">=</span> <span class="n">new</span> <span class="n">Controller</span><span class="p">();</span>
-    <span class="n">view</span> <span class="o">=</span> <span class="n">new</span> <span class="n">AppView</span><span class="p">;</span>
-    <span class="n">controller</span><span class="o">-&gt;</span><span class="n">setView</span><span class="p">(</span><span class="n">view</span><span class="p">);</span>
-    <span class="n">controller</span><span class="o">-&gt;</span><span class="n">Clear</span><span class="p">();</span>
-    <span class="n">g_freestyle</span><span class="p">.</span><span class="n">scene</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
-    <span class="n">lineset_copied</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
-
-    <span class="n">BLI_callback_add</span><span class="p">(</span><span class="o">&amp;</span><span class="n">load_post_callback_funcstore</span><span class="p">,</span> <span class="n">BLI_CB_EVT_LOAD_POST</span><span class="p">);</span>
-
-    <span class="n">freestyle_is_initialized</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
-<span class="p">}</span>
-</pre></div>
-
-
-<p>中心的な処理を行うのは <code>FRS_do_stroke_rendering</code> のようだ。特に <code>prepare(re, srl)</code> は</p>
-<div class="highlight"><pre><span></span>    <span class="c1">// prepare Freestyle:</span>
-    <span class="c1">//   - load mesh</span>
-    <span class="c1">//   - add style modules</span>
-    <span class="c1">//   - set parameters</span>
-    <span class="c1">//   - compute view map</span>
-</pre></div>
-
-
-<p>というコメントの通り <code>ViewMap</code> の計算を行ったり重要な役割を果たしている。</p>
-<h3>3. Blender アドオンからの利用</h3>
-<p>さて、ここまで Blender における Freestyle の処理を内部処理までは踏み込まないでざっくりと見てきた。Blender アドオンからどれくらいの粒度で利用可能だろうか。Python スクリプトで記述することを考えると、細かく制御するのはちょっと厳しい気がしている。</p>
-<p>これから確認しなければならないことは、いまのところ以下である:</p>
-<ul>
-<li><code>ViewMap cache</code> の詳細 (現行の Blender では ViewMap cache の機能が搭載されている。どのようなデータがキャッシュされているのか、インスタンスが create されたり free されるタイミングを調べる)</li>
-<li><code>Predicates</code> の処理フロー</li>
-</ul>
-<p>たとえば Freestyle の論文にある Calligraphic shader は方向をベクトルの形で指定することができるが、これを現在用意されている Python スタイルモジュールではなく NodeTree の GUI でマウス等を用い方向を指定して、さらにリアルタイムで結果を反映させられないかと考えている。以前 Freestyle SVG Exporter を調べたとき Python のオブジェクトから ViewShape, ViewEdge, ViewMap などにアクセスできた記憶があるので、それらを deepcopy して使うという手もあるのかもしれない。</p>
-                <div class="clear"></div>
-
-                <div class="info">
-
-                    <a href="http://www.chino.coffee/category/software.html" rel="tag" class="category">Software</a>
-                    &nbsp;
-                    &nbsp;<a href="http://www.chino.coffee/tag/blender.html" class="tags">Blender</a>
-                    &nbsp;<a href="http://www.chino.coffee/tag/freestyle.html" class="tags">Freestyle</a>
-                    &nbsp;<a href="http://www.chino.coffee/tag/siphon.html" class="tags">Siphon</a>
-                </div>
-            </article>            <h4 class="date">2017-04-09</h4>
-
-            <article class="post">
-                <h2 class="title">
-                    <a href="http://www.chino.coffee/siphon-memo-2.html" rel="bookmark" title="Permanent Link to &quot;Siphon memo 2&quot;">Siphon memo 2</a>
-                </h2>
-
-                <p>Siphon は一度 <code>view map</code> を計算さえすれば <code>feature edges</code> からストロークの生成はごく短時間で可能であるという予想で開発を進めている。そのためには <code>view map</code> を bake する必要がある。とりあえず以下のコードで <a href="https://docs.blender.org/api/blender_python_api_2_78c_release/bpy.types.RegionView3D.html?highlight=regionview3d">RegionView3D</a> をロックすることができる。</p>
-<div class="highlight"><pre><span></span><span class="n">context</span><span class="o">.</span><span class="n">space_data</span><span class="o">.</span><span class="n">region_3d</span><span class="o">.</span><span class="n">lock_rotation</span> <span class="o">=</span> <span class="bp">True</span>
-</pre></div>
-
-
-<p><code>Viewport Shading</code> で <code>Rendered</code> にしておき、その画面を上記のコードでロックしておく。そして Siphon NodeTree 上での編集操作をフックしておいてストロークを描画する形を考えている。Render Result の方もリアルタイムに更新できないかと考えている。</p>
+<h3>6) Menpo</h3>
+<p><a href="http://www.menpo.org/">Menpo</a> は Python の deform library であり、活発に開発が行われている。しっかりと把握はできていないのだがどちらかというと raster images に対してトポロジーをフィットする機能が重点的に開発されているように見える。</p>
+<h3>実装案</h3>
+<p>Siphon では 2.5D Cartoon Models のような 2D vector の３次元空間への配置手法と GPLVM による shape manifold を使った Freestyle の線画 (ViewMap) の編集を使おうと考えている。いまのところ以下に示した画像のように Blender 上で ViewMap やオブジェクトの配置を latent space に落とし込み manifold をノード上で操作することで輪郭線を編集する方針で進めている。<code>Pot object</code> という Python クラスを Siphon で定義し、そこに manifold 構築などの機能を加える予定である。</p>
+<p><img alt="Pot object" src="/images/blog-20170527-pot.png"></p>
+<p>BayesianGPLVM 等は Python だと <a href="https://github.com/SheffieldML/GPy">GPy</a> が使いやすそうなので、こちらを試し始めている。<a href="https://github.com/GPflow/GPflow">GPflow</a> という TensorFlow バックエンドを用いたものも登場しており、こちらは GPU を用いて高速化もできるそうなので、そのうち移行するかもしれない。</p>
+<p>Blender アドオンをいろいろ調べたりして気づいたのは <code>SpaceImageEditor</code> などのインターフェースを操作する際、Blender API だけではアクセスできない属性が存在するため <a href="https://docs.python.org/3/library/ctypes.html">ctypes</a> を使って直接メモリ上を参照するワザがよく使われていることだ。Blender のヘッダーファイルを参照し構造体を記述するため、プログラムのライセンスは自動的に GPL になる。Shape manipulation などのライブラリを用いたりするときにライセンスが競合したりすると困るので、以下のように <code>siphon-server</code> というものとアドオンを分離する設計で進めようと考えている。すぐには分離しないかもしれないが...</p>
+<p>輪郭線編集のときに問題になるのは Z-order である。ここは Freestyle で QI (quantitative invisibility) の情報が取れるので、この情報と 2D Vector の Boolean operations を使い解決できないかと考えている。</p>
+<p><img alt="separation" src="/images/blog-20170527-separation.png"></p>
+<p>アドオンとサーバは <a href="http://www.grpc.io/">gRPC</a> で通信するように上の画像だとあるが、もっと簡単なものから始めるかもしれない。また、個人的に Cycling '74 の <a href="https://cycling74.com/products/max/">Max</a> もよく使うので OSC でそのうちアドオンと通信できればと考えている（確か <a href="https://github.com/nortikin/sverchok">Sverchok</a> に OSC による通信ノードが存在している）。</p>
                 <div class="clear"></div>
 
                 <div class="info">
@@ -333,9 +108,9 @@
                 <div class="clear"></div>
                 <div class="pages">
 
-                    <a href="http://www.chino.coffee/" class="prev_page">&larr;&nbsp;Previous</a>
-                    <a href="http://www.chino.coffee/page/3" class="next_page">Next&nbsp;&rarr;</a>
-                    <span>Page 2 of 3</span>
+                    <a href="http://www.chino.coffee/category/software.html" class="prev_page">&larr;&nbsp;Previous</a>
+                    <a href="http://www.chino.coffee/category/software3.html" class="next_page">Next&nbsp;&rarr;</a>
+                    <span>Page 2 of 6</span>
                 </div>
 
         </div>

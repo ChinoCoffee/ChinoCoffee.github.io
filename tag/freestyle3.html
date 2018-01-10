@@ -19,7 +19,7 @@
         <nav>
             <ul>
                 <li class="ephemeral selected"><a href="http://www.chino.coffee/tag/freestyle3.html">Freestyle</a></li>
-                <li><a href="/blog.html">blog</li>
+                <li><a href="/archives.html">blog</li>
                 <li><a></a></li>
 
                 <li><a href="http://www.chino.coffee/pages/about.html">about</a></li>
@@ -34,43 +34,483 @@
         <hr />
     </header>
     <div id="wrapper">
-        <div id="content">            <h4 class="date">2017-04-03</h4>
+        <div id="content">
+            <h4 class="date">2017-05-02</h4>
 
             <article class="post">
                 <h2 class="title">
-                    <a href="http://www.chino.coffee/siphon-memo-1.html" rel="bookmark" title="Permanent Link to &quot;Siphon memo 1&quot;">Siphon memo 1</a>
+                    <a href="http://www.chino.coffee/siphon-memo-4.html" rel="bookmark" title="Permanent Link to &quot;Siphon memo 4&quot;">Siphon memo 4</a>
                 </h2>
 
-                <p>現在開発している Blender アドオン <a href="https://github.com/ChinoCoffee/siphon">Siphon</a> についての雑多なメモ。</p>
-<p>Siphon は <a href="https://www.blender.org/">Blender</a> の Non-photorealistic rendering engine である <a href="https://docs.blender.org/manual/en/dev/render/freestyle/index.html">Freestyle</a> をベースに構築する予定である。Freestyle は contour drawings に特化しており、従来のピクセル単位 <code>0D</code> ではないストローク <code>1D</code> という単位での表現手法を実現している。場所がバラバラになってしまうが Freestyle について GitHub 上にも<a href="https://github.com/ChinoCoffee/chino-3d/wiki/Freestyle">簡単なメモ</a>をまとめている。</p>
-<p>Freestyle では 3D と 2D の架け橋として <code>View Map</code> と呼ばれる重要なデータ構造が用意されている。View Map の処理はポリゴン数が多くなるほど重くなる傾向にある。Siphon では計算した View Map をキャッシュしておき、ノード上でパラメータを変えストロークの描画をインタラクティブに行えるようにするのが目標の一つである。とは言うものの、<a href="https://wiki.blender.org/index.php/User:Kjym3/DevFundProject/Proposal">Proposal for the Development of Blender's Non-Photorealistic Rendering Capabilities</a> の Task 2 で View map caching が触れられており、もしかするとキャッシュ機構自体はすでに実装されているのかもしれない。</p>
-<h3>輪郭線編集</h3>
-<p>輪郭線編集の必要性を感じたのは以下のツイートを見たことがきっかけであった。</p>
-<blockquote class="twitter-tweet" data-conversation="none" data-lang="en"><p lang="ja" dir="ltr"><a href="https://twitter.com/kohta0130">@kohta0130</a> 質問がたくさん来たので、こういうことです。顔を変形させなかったら、顎下のシルエットラインの影響で太って見えたり、受け口っぽく見えるんですよね。 <a href="https://t.co/p26F4zJlCb">pic.twitter.com/p26F4zJlCb</a></p>&mdash; 森江康太 Kohta Morie (@kohta0130) <a href="https://twitter.com/kohta0130/status/717962037008044032">April 7, 2016</a></blockquote>
+                <p><a href="http://www.chino.coffee/siphon-memo-3.html">前回</a>に引き続き Blender における Freestyle の処理フローを調査している。今回は ViewMap の構築とキャッシュあたりについて調べてみよう。</p>
+<h3>1. Controller::Controller()</h3>
+<p>まずは <code>Controller::Controller()</code> の実装を見てみよう。</p>
+<div class="highlight"><pre><span></span><span class="k">namespace</span> <span class="n">Freestyle</span> <span class="p">{</span>
 
-<script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
+<span class="n">Controller</span><span class="o">::</span><span class="n">Controller</span><span class="p">()</span>
+<span class="p">{</span>
 
-<p>この映像作品の場合、顎下のシルエットラインを 3D のモデルのポリゴンを編集することでレタッチしている。3D モデルを deform する方法については以下の記事も興味深い。</p>
+    <span class="c1">// ...</span>
+
+    <span class="n">_ViewMap</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="n">_Canvas</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="n">_VisibilityAlgo</span> <span class="o">=</span> <span class="n">ViewMapBuilder</span><span class="o">::</span><span class="n">ray_casting_adaptive_traditional</span><span class="p">;</span>
+    <span class="c1">//_VisibilityAlgo = ViewMapBuilder::ray_casting;</span>
+
+    <span class="n">_Canvas</span> <span class="o">=</span> <span class="k">new</span> <span class="n">AppCanvas</span><span class="p">;</span>
+
+    <span class="n">_inter</span> <span class="o">=</span> <span class="k">new</span> <span class="n">PythonInterpreter</span><span class="p">();</span>
+    <span class="n">_EnableViewMapCache</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="n">_EnableQI</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+    <span class="n">_EnableFaceSmoothness</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="n">_ComputeRidges</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+    <span class="n">_ComputeSteerableViewMap</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="n">_ComputeSuggestive</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+    <span class="n">_ComputeMaterialBoundaries</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+    <span class="n">_sphereRadius</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">;</span>
+    <span class="n">_creaseAngle</span> <span class="o">=</span> <span class="mf">134.43</span><span class="p">;</span>
+    <span class="n">prevSceneHash</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">;</span>
+
+    <span class="n">init_options</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p><code>_EnableViewMapCache = false;</code> となっている。これは同じファイルに</p>
+<div class="highlight"><pre><span></span><span class="kt">void</span> <span class="n">Controller</span><span class="o">::</span><span class="n">setViewMapCache</span><span class="p">(</span><span class="kt">bool</span> <span class="n">iBool</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">_EnableViewMapCache</span> <span class="o">=</span> <span class="n">iBool</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>とあるようにここで指定されるようである。</p>
+<p>実際は <code>/freestyle/intern/blender_interface/FRS_freestyle.cpp</code> の <code>FRS_do_stroke_rendering</code> 関数</p>
+<div class="highlight"><pre><span></span><span class="n">Render</span> <span class="o">*</span><span class="nf">FRS_do_stroke_rendering</span><span class="p">(</span><span class="n">Render</span> <span class="o">*</span><span class="n">re</span><span class="p">,</span> <span class="n">SceneRenderLayer</span> <span class="o">*</span><span class="n">srl</span><span class="p">,</span> <span class="kt">int</span> <span class="n">render</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// ...</span>
+
+    <span class="n">controller</span><span class="o">-&gt;</span><span class="n">setViewMapCache</span><span class="p">((</span><span class="n">srl</span><span class="o">-&gt;</span><span class="n">freestyleConfig</span><span class="p">.</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">FREESTYLE_VIEW_MAP_CACHE</span><span class="p">)</span> <span class="o">?</span> <span class="nb">true</span> <span class="o">:</span> <span class="nb">false</span><span class="p">);</span>
+</pre></div>
+
+
+<p>で実行されているようだ。</p>
+<h3>2. View map cache</h3>
+<p>まずは ViewMap のキャッシュを削除している箇所を見てみよう。</p>
+<p><code>/freestyle/intern/blender_interface/FRS_freestyle.cpp</code> を見てみる。名前からおそらくキャッシュ削除処理は <code>FRS_free_view_map_cache</code> 関数で行われているのではないかと考える。</p>
+<div class="highlight"><pre><span></span><span class="kt">void</span> <span class="nf">FRS_free_view_map_cache</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// free cache</span>
+    <span class="n">controller</span><span class="o">-&gt;</span><span class="n">DeleteViewMap</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span>
+<span class="cp">#if 0</span><span class="c"></span>
+<span class="c">    if (G.debug &amp; G_DEBUG_FREESTYLE) {</span>
+<span class="c">        printf(&quot;View map cache freed\n&quot;);</span>
+<span class="c">    }</span>
+<span class="cp">#endif</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p><code>controller-&gt;DeleteViewMap</code> を見てみる。<code>/freestyle/intern/application/Controller.cpp</code> <code>L.419</code> に実装が存在する。</p>
+<div class="highlight"><pre><span></span><span class="kt">void</span> <span class="n">Controller</span><span class="o">::</span><span class="n">DeleteViewMap</span><span class="p">(</span><span class="kt">bool</span> <span class="n">freeCache</span><span class="p">)</span>
+<span class="p">{</span>
+
+    <span class="c1">// ...</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="nb">NULL</span> <span class="o">!=</span> <span class="n">_ViewMap</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">freeCache</span> <span class="o">||</span> <span class="o">!</span><span class="n">_EnableViewMapCache</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">delete</span> <span class="n">_ViewMap</span><span class="p">;</span>
+            <span class="n">_ViewMap</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+            <span class="n">prevSceneHash</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">else</span> <span class="p">{</span>
+            <span class="n">_ViewMap</span><span class="o">-&gt;</span><span class="n">Clean</span><span class="p">();</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p><code>freeCache || _EnableViewMapCache</code> から推測して <code>freeCache</code> はハードコードされたタイミングでのキャッシュ消去を意図しているのだろう。<code>DeleteViewMap</code> で検索すると、</p>
+<div class="highlight"><pre><span></span><span class="p">.</span><span class="o">/</span><span class="n">freestyle</span><span class="o">/</span><span class="n">intern</span><span class="o">/</span><span class="n">application</span><span class="o">/</span><span class="n">Controller</span><span class="p">.</span><span class="nl">cpp</span><span class="p">:</span>  <span class="n">DeleteViewMap</span><span class="p">();</span>
+<span class="p">.</span><span class="o">/</span><span class="n">freestyle</span><span class="o">/</span><span class="n">intern</span><span class="o">/</span><span class="n">application</span><span class="o">/</span><span class="n">Controller</span><span class="p">.</span><span class="nl">cpp</span><span class="p">:</span><span class="kt">void</span> <span class="n">Controller</span><span class="o">::</span><span class="n">DeleteViewMap</span><span class="p">(</span><span class="kt">bool</span> <span class="n">freeCache</span><span class="p">)</span>
+<span class="p">.</span><span class="o">/</span><span class="n">freestyle</span><span class="o">/</span><span class="n">intern</span><span class="o">/</span><span class="n">application</span><span class="o">/</span><span class="n">Controller</span><span class="p">.</span><span class="nl">cpp</span><span class="p">:</span>  <span class="n">DeleteViewMap</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span>
+<span class="p">.</span><span class="o">/</span><span class="n">freestyle</span><span class="o">/</span><span class="n">intern</span><span class="o">/</span><span class="n">application</span><span class="o">/</span><span class="n">Controller</span><span class="p">.</span><span class="nl">cpp</span><span class="p">:</span>  <span class="n">DeleteViewMap</span><span class="p">();</span>
+<span class="p">.</span><span class="o">/</span><span class="n">freestyle</span><span class="o">/</span><span class="n">intern</span><span class="o">/</span><span class="n">application</span><span class="o">/</span><span class="n">Controller</span><span class="p">.</span><span class="nl">h</span><span class="p">:</span>    <span class="kt">void</span> <span class="n">DeleteViewMap</span><span class="p">(</span><span class="kt">bool</span> <span class="n">freeCache</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<span class="p">.</span><span class="o">/</span><span class="n">freestyle</span><span class="o">/</span><span class="n">intern</span><span class="o">/</span><span class="n">blender_interface</span><span class="o">/</span><span class="n">FRS_freestyle</span><span class="p">.</span><span class="nl">cpp</span><span class="p">:</span> <span class="n">controller</span><span class="o">-&gt;</span><span class="n">DeleteViewMap</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span>
+</pre></div>
+
+
+<p>とある。実際に呼び出されている箇所を見てみると、</p>
+<table>
+<thead>
+<tr>
+<th align="left">呼び出し元関数</th>
+<th align="left">命令</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><code>Controller::CloseFile()</code></td>
+<td align="left"><code>DeleteViewMap()</code></td>
+<td></td>
+</tr>
+<tr>
+<td align="left"><code>Controller::ComputeViewMap()</code></td>
+<td align="left"><code>DeleteViewMap(true)</code></td>
+<td>強制削除</td>
+</tr>
+<tr>
+<td align="left"><code>Controller::DrawStrokes()</code></td>
+<td align="left"><code>DeleteViewMap()</code></td>
+<td></td>
+</tr>
+<tr>
+<td align="left"><code>FRS_free_view_map_cache(void)</code></td>
+<td align="left"><code>DeleteViewMap(true)</code></td>
+<td>強制削除</td>
+</tr>
+</tbody>
+</table>
+<p>となる。</p>
+<p>キャッシュを削除する場合は、<code>delete _ViewMap;</code> とあるように完全に <code>Controller</code> の <code>_ViewMap</code> 自体を削除するようだ。<code>SceneHash</code> というのは ViewMap を生成する際 scene graph から生成されるハッシュのようである。</p>
+<p>ではキャッシュを削除しない場合はどうなるかというと <code>_ViewMap-&gt;Clean()</code> が実行されるようだ。この実装は <code>/freestyle/intern/view_map/ViewMap.cpp</code> <code>L.66</code> 付近にある。</p>
+<div class="highlight"><pre><span></span><span class="kt">void</span> <span class="n">ViewMap</span><span class="o">::</span><span class="n">Clean</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="n">FEdge</span><span class="o">*&gt;</span> <span class="n">tmpEdges</span><span class="p">;</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ViewShape</span><span class="o">*&gt;::</span><span class="n">iterator</span> <span class="n">vs</span> <span class="o">=</span> <span class="n">_VShapes</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vsend</span> <span class="o">=</span> <span class="n">_VShapes</span><span class="p">.</span><span class="n">end</span><span class="p">();</span> <span class="n">vs</span> <span class="o">!=</span> <span class="n">vsend</span><span class="p">;</span> <span class="n">vs</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">vector</span><span class="o">&lt;</span><span class="n">FEdge</span><span class="o">*&gt;&amp;</span> <span class="n">edges</span> <span class="o">=</span> <span class="p">(</span><span class="o">*</span><span class="n">vs</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">sshape</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">getEdgeList</span><span class="p">();</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">FEdge</span><span class="o">*&gt;::</span><span class="n">iterator</span> <span class="n">it</span> <span class="o">=</span> <span class="n">edges</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">itend</span> <span class="o">=</span> <span class="n">edges</span><span class="p">.</span><span class="n">end</span><span class="p">();</span> <span class="n">it</span> <span class="o">!=</span> <span class="n">itend</span><span class="p">;</span> <span class="n">it</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">((</span><span class="o">*</span><span class="n">it</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">isTemporary</span><span class="p">())</span> <span class="p">{</span>
+                <span class="p">(</span><span class="o">*</span><span class="n">it</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">setTemporary</span><span class="p">(</span><span class="nb">false</span><span class="p">);</span> <span class="c1">// avoid being counted multiple times</span>
+                <span class="n">tmpEdges</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="o">*</span><span class="n">it</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">FEdge</span><span class="o">*&gt;::</span><span class="n">iterator</span> <span class="n">it</span> <span class="o">=</span> <span class="n">tmpEdges</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">itend</span> <span class="o">=</span> <span class="n">tmpEdges</span><span class="p">.</span><span class="n">end</span><span class="p">();</span> <span class="n">it</span> <span class="o">!=</span> <span class="n">itend</span><span class="p">;</span> <span class="n">it</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ViewShape</span><span class="o">*&gt;::</span><span class="n">iterator</span> <span class="n">vs</span> <span class="o">=</span> <span class="n">_VShapes</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vsend</span> <span class="o">=</span> <span class="n">_VShapes</span><span class="p">.</span><span class="n">end</span><span class="p">();</span> <span class="n">vs</span> <span class="o">!=</span> <span class="n">vsend</span><span class="p">;</span> <span class="n">vs</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+            <span class="p">(</span><span class="o">*</span><span class="n">vs</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">sshape</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">RemoveEdge</span><span class="p">(</span><span class="o">*</span><span class="n">it</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="p">(</span><span class="o">*</span><span class="n">it</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">vertexA</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">RemoveFEdge</span><span class="p">(</span><span class="o">*</span><span class="n">it</span><span class="p">);</span>
+        <span class="p">(</span><span class="o">*</span><span class="n">it</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">vertexB</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">RemoveFEdge</span><span class="p">(</span><span class="o">*</span><span class="n">it</span><span class="p">);</span>
+        <span class="k">delete</span> <span class="p">(</span><span class="o">*</span><span class="n">it</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>これを見る感じだと <code>feature edges</code> のうち一時的に使用したものについて削除しているようである。</p>
+<p>さて、この <code>FRS_free_view_map_cache</code> 関数は <code>/freestyle/intern/blender_interface/FRS_freestyle.cpp</code> 以外に <code>/makesrna/intern/rna_scene.c</code> という箇所でも使用されている。</p>
+<p><code>L.1604-1609</code> で</p>
+<div class="highlight"><pre><span></span><span class="k">static</span> <span class="kt">void</span> <span class="nf">rna_Scene_use_view_map_cache_update</span><span class="p">(</span><span class="n">Main</span> <span class="o">*</span><span class="n">UNUSED</span><span class="p">(</span><span class="n">bmain</span><span class="p">),</span> <span class="n">Scene</span> <span class="o">*</span><span class="n">UNUSED</span><span class="p">(</span><span class="n">scene</span><span class="p">),</span> <span class="n">PointerRNA</span> <span class="o">*</span><span class="n">UNUSED</span><span class="p">(</span><span class="n">ptr</span><span class="p">))</span>
+<span class="p">{</span>
+<span class="cp">#ifdef WITH_FREESTYLE</span>
+    <span class="n">FRS_free_view_map_cache</span><span class="p">();</span>
+<span class="cp">#endif</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>とある。さて、これは同じファイルの <code>L.4141-4145</code> に 以下のような実装がある。</p>
+<div class="highlight"><pre><span></span>    <span class="n">prop</span> <span class="o">=</span> <span class="n">RNA_def_property</span><span class="p">(</span><span class="n">srna</span><span class="p">,</span> <span class="s">&quot;use_view_map_cache&quot;</span><span class="p">,</span> <span class="n">PROP_BOOLEAN</span><span class="p">,</span> <span class="n">PROP_NONE</span><span class="p">);</span>
+    <span class="n">RNA_def_property_boolean_sdna</span><span class="p">(</span><span class="n">prop</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="s">&quot;flags&quot;</span><span class="p">,</span> <span class="n">FREESTYLE_VIEW_MAP_CACHE</span><span class="p">);</span>
+    <span class="n">RNA_def_property_ui_text</span><span class="p">(</span><span class="n">prop</span><span class="p">,</span> <span class="s">&quot;View Map Cache&quot;</span><span class="p">,</span>
+                             <span class="s">&quot;Keep the computed view map and avoid re-calculating it if mesh geometry is unchanged&quot;</span><span class="p">);</span>
+    <span class="n">RNA_def_property_update</span><span class="p">(</span><span class="n">prop</span><span class="p">,</span> <span class="n">NC_SCENE</span> <span class="o">|</span> <span class="n">ND_RENDER_OPTIONS</span><span class="p">,</span> <span class="s">&quot;rna_Scene_use_view_map_cache_update&quot;</span><span class="p">);</span>
+</pre></div>
+
+
+<p><code>"Keep the computed view map..."</code> の文字列は、</p>
+<p><img alt="ViewMapCache" src="/images/blog-20170501-viewmapcache.png"></p>
+<p>と同じようだ。なのでチェックが入れば <code>_EnableViewMapCache = true</code> となり、</p>
 <ul>
-<li><a href="https://blenderyard.wordpress.com/2011/09/07/mesh-deform-with-non-uniform-perspective-projection/">Mesh deform with non-uniform perspective projection</a></li>
+<li><code>Controller::CloseFile()</code></li>
+<li><code>Controller::DrawStrokes()</code></li>
 </ul>
-<p>また、ポリゴンではなく輪郭線を 2D 上で操作するという方法もあり得る。Freestyle の論文には、歯車の歯先を丸くするというような例が載っており、輪郭線の編集についても可能なように設計されている。さらに、あるシーンの複数フレームの View Map をキャッシュし、ターゲットの輪郭線を deform する方法があれば、アニメーションもより 3D ぽく見えないように見せることもできるようになるかもしれない。あるいは temporal coherence へ対処する一つの方法になるかもしれないと考えている。</p>
-<h3>面の交差</h3>
-<p>Freestyle でよく聞く要望点として面と面の交差部分のエッジが描画されないというものがある。実装については T.K.氏の以下のディスカッションがとても参考になる。</p>
-<ul>
-<li><a href="https://lists.blender.org/pipermail/bf-blender-npr/2014-February/000002.html">[Bf-blender-npr] Intersections in freestyle</a></li>
-</ul>
-<h3>影の輪郭線</h3>
-<p>知人から 3DCG セルアニメーションの違和感として、影の輪郭線を指摘されたことがある。もし影の輪郭線も編集できれば違和感を減らせるかもしれない。</p>
-<p>Freestyle の論文では <code>feature lines</code> の種類を将来拡張するということが future work として書かれている。影の輪郭線を追加することも可能かもしれない。その場合、discontinuity などいくつか条件を満たすかどうか調べる必要があるかもしれない。</p>
-<p>また影の領域から hatching や shading も作れるかもしれない。領域というデータ構造は Freestyle では定義されていなさそうだ。いまのところ Freestyle の SVG 出力機能として <a href="https://docs.blender.org/manual/en/dev/render/freestyle/export_svg.html#exporting-fills">Exporting Fills</a> というものがある。これ自体は <code>Contour</code> 及び <code>External Contour</code> と predicates の組み合わせによって実現されているようである。</p>
-<h3>懸念事項</h3>
-<p>いま心配しているのは、実際にアドオンとして配布する場合、PyPI の依存ライブラリを含めたインストール手法をユーザに提供可能かということだ。開発では <a href="https://github.com/ChinoCoffee/chino-3d/wiki/pip">Blender に pip を導入し</a>改造している。<a href="https://github.com/hbldh/pyefd">PyEFD</a> なら依存ライブラリが NumPy だけなので大丈夫そうだ。<a href="http://www.menpo.org/">Menpo</a> は <a href="http://www.menpo.org/installation/pip.html">conda へのインストールを推奨している</a>ぐらい依存関係が複雑なので難しい。Keras や Chainer も同様で、サーバをたててもらい RPC で連携するような形になるかもしれない。</p>
-<h3>TODO</h3>
-<ol>
-<li>Freestyle の関数や predicates をノード化する</li>
-<li>planar graph の操作と PyEFD による輪郭線の編集</li>
-</ol>
+<p>の場合であれば <code>_ViewMap</code> は削除されず <code>clean()</code> だけ実行される仕組みのようだ。しかし <code>RNA</code> や <code>DNA</code> が Blender でのどんなデータを意味しているのかまだ良くわかっていない。後で調べてみよう。</p>
+<h3>3. ViewMapBuilder, Controller::ComputeViewMap()</h3>
+<p>ViewMap の計算は <code>/freestyle/intern/view_map/ViewMapBuilder.cpp</code> <code>L.995</code> に内容が示されている。</p>
+<div class="highlight"><pre><span></span><span class="n">ViewMap</span> <span class="o">*</span><span class="n">ViewMapBuilder</span><span class="o">::</span><span class="n">BuildViewMap</span><span class="p">(</span><span class="n">WingedEdge</span><span class="o">&amp;</span> <span class="n">we</span><span class="p">,</span> <span class="n">visibility_algo</span> <span class="n">iAlgo</span><span class="p">,</span> <span class="n">real</span> <span class="n">epsilon</span><span class="p">,</span>
+                                      <span class="k">const</span> <span class="n">BBox</span><span class="o">&lt;</span><span class="n">Vec3r</span><span class="o">&gt;&amp;</span> <span class="n">bbox</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">sceneNumFaces</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">_ViewMap</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ViewMap</span><span class="p">;</span>
+    <span class="n">_currentId</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="n">_currentFId</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">_currentSVertexId</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="c1">// Builds initial view edges</span>
+    <span class="n">computeInitialViewEdges</span><span class="p">(</span><span class="n">we</span><span class="p">);</span>
+
+    <span class="c1">// Detects cusps</span>
+    <span class="n">computeCusps</span><span class="p">(</span><span class="n">_ViewMap</span><span class="p">);</span>
+
+    <span class="c1">// Compute intersections</span>
+    <span class="n">ComputeIntersections</span><span class="p">(</span><span class="n">_ViewMap</span><span class="p">,</span> <span class="n">sweep_line</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">);</span>
+
+    <span class="c1">// Compute visibility</span>
+    <span class="n">ComputeEdgesVisibility</span><span class="p">(</span><span class="n">_ViewMap</span><span class="p">,</span> <span class="n">we</span><span class="p">,</span> <span class="n">bbox</span><span class="p">,</span> <span class="n">sceneNumFaces</span><span class="p">,</span> <span class="n">iAlgo</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">);</span>
+
+    <span class="k">return</span> <span class="n">_ViewMap</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>ViewMapBuilder は以下の <code>/freestyle/intern/application/Controller.cpp</code> の <code>ComputeViewMap()</code> を見てみると <code>vmBuilder</code> としてインスタンス化されている。<code>WXEdgeBuilder</code> や <code>edgeDetector</code> 等により処理された拡張 winged edge オブジェクト <code>_winged_edge</code> と quantitative invisibility <code>(QI)</code> などのいくつかの設定を用いて ViewMap を構築しているようだ。winged edge は後の Blender から Freestyle へメッシュを読み込む <code>Controller::LoadMesh</code> でも触れる。</p>
+<div class="highlight"><pre><span></span><span class="kt">void</span> <span class="n">Controller</span><span class="o">::</span><span class="n">ComputeViewMap</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">_ListOfModels</span><span class="p">.</span><span class="n">size</span><span class="p">())</span>
+        <span class="k">return</span><span class="p">;</span>
+
+    <span class="n">DeleteViewMap</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span>
+
+    <span class="c1">// ...</span>
+
+    <span class="n">edgeDetector</span><span class="p">.</span><span class="n">processShapes</span><span class="p">(</span><span class="o">*</span><span class="n">_winged_edge</span><span class="p">);</span>
+
+    <span class="n">real</span> <span class="n">duration</span> <span class="o">=</span> <span class="n">_Chrono</span><span class="p">.</span><span class="n">stop</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">G</span><span class="p">.</span><span class="n">debug</span> <span class="o">&amp;</span> <span class="n">G_DEBUG_FREESTYLE</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Feature lines    : %lf</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">duration</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">_pRenderMonitor</span><span class="o">-&gt;</span><span class="n">testBreak</span><span class="p">())</span>
+        <span class="k">return</span><span class="p">;</span>
+
+    <span class="c1">// Builds the view map structure from the flagged WSEdge structure:</span>
+    <span class="c1">//----------------------------------------------------------</span>
+    <span class="n">ViewMapBuilder</span> <span class="n">vmBuilder</span><span class="p">;</span>
+    <span class="n">vmBuilder</span><span class="p">.</span><span class="n">setEnableQI</span><span class="p">(</span><span class="n">_EnableQI</span><span class="p">);</span>
+    <span class="n">vmBuilder</span><span class="p">.</span><span class="n">setViewpoint</span><span class="p">(</span><span class="n">vp</span><span class="p">);</span>
+    <span class="n">vmBuilder</span><span class="p">.</span><span class="n">setTransform</span><span class="p">(</span><span class="n">mv</span><span class="p">,</span> <span class="n">proj</span><span class="p">,</span> <span class="n">viewport</span><span class="p">,</span> <span class="n">_pView</span><span class="o">-&gt;</span><span class="n">GetFocalLength</span><span class="p">(),</span> <span class="n">_pView</span><span class="o">-&gt;</span><span class="n">GetAspect</span><span class="p">(),</span> <span class="n">_pView</span><span class="o">-&gt;</span><span class="n">GetFovyRadian</span><span class="p">());</span>
+    <span class="n">vmBuilder</span><span class="p">.</span><span class="n">setFrustum</span><span class="p">(</span><span class="n">_pView</span><span class="o">-&gt;</span><span class="n">znear</span><span class="p">(),</span> <span class="n">_pView</span><span class="o">-&gt;</span><span class="n">zfar</span><span class="p">());</span>
+    <span class="n">vmBuilder</span><span class="p">.</span><span class="n">setGrid</span><span class="p">(</span><span class="o">&amp;</span><span class="n">_Grid</span><span class="p">);</span>
+    <span class="n">vmBuilder</span><span class="p">.</span><span class="n">setRenderMonitor</span><span class="p">(</span><span class="n">_pRenderMonitor</span><span class="p">);</span>
+
+<span class="cp">#if 0</span><span class="c"></span>
+<span class="c">    // Builds a tesselated form of the silhouette for display purpose:</span>
+<span class="c">    //---------------------------------------------------------------</span>
+<span class="c">    ViewMapTesselator3D sTesselator3d;</span>
+<span class="c">    ViewMapTesselator2D sTesselator2d;</span>
+<span class="c">    sTesselator2d.setNature(_edgeTesselationNature);</span>
+<span class="c">    sTesselator3d.setNature(_edgeTesselationNature);</span>
+<span class="cp">#endif</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">G</span><span class="p">.</span><span class="n">debug</span> <span class="o">&amp;</span> <span class="n">G_DEBUG_FREESTYLE</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">===  Building the view map  ===&quot;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="n">_Chrono</span><span class="p">.</span><span class="n">start</span><span class="p">();</span>
+    <span class="c1">// Build View Map</span>
+    <span class="n">_ViewMap</span> <span class="o">=</span> <span class="n">vmBuilder</span><span class="p">.</span><span class="n">BuildViewMap</span><span class="p">(</span><span class="o">*</span><span class="n">_winged_edge</span><span class="p">,</span> <span class="n">_VisibilityAlgo</span><span class="p">,</span> <span class="n">_EPSILON</span><span class="p">,</span> <span class="n">_Scene3dBBox</span><span class="p">,</span> <span class="n">_SceneNumFaces</span><span class="p">);</span>
+    <span class="n">_ViewMap</span><span class="o">-&gt;</span><span class="n">setScene3dBBox</span><span class="p">(</span><span class="n">_Scene3dBBox</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">G</span><span class="p">.</span><span class="n">debug</span> <span class="o">&amp;</span> <span class="n">G_DEBUG_FREESTYLE</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">&quot;ViewMap edge count : %i</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">_ViewMap</span><span class="o">-&gt;</span><span class="n">viewedges_size</span><span class="p">());</span>
+    <span class="p">}</span>
+
+    <span class="c1">// ...</span>
+
+    <span class="n">duration</span> <span class="o">=</span> <span class="n">_Chrono</span><span class="p">.</span><span class="n">stop</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">G</span><span class="p">.</span><span class="n">debug</span> <span class="o">&amp;</span> <span class="n">G_DEBUG_FREESTYLE</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">&quot;ViewMap building : %lf</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">duration</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="c1">// ...</span>
+
+    <span class="c1">// Draw the steerable density map:</span>
+    <span class="c1">//--------------------------------</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">_ComputeSteerableViewMap</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ComputeSteerableViewMap</span><span class="p">();</span>
+    <span class="p">}</span>
+    <span class="c1">// Reset Style modules modification flags</span>
+    <span class="n">resetModified</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span>
+
+    <span class="n">DeleteWingedEdge</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p><code>SteerableViewMap</code> はまだよく分からない。内部で <code>GrayImage</code> というのが使用されているようなので、もしかしたらストロークの密度を逐次監視しつつ描き足していく <code>causal density</code> と関係しているのかもしれない。後で調べる必要がある。また <code>frustum</code> とは円錐台のことらしい。</p>
+<p><code>ComputeViewMap()</code> は主に <code>/freestyle/intern/blender_interface/FRS_freestyle.cpp</code> の <code>prepare</code> 関数で呼び出されるようだ。<code>/freestyle/intern/application/Controller.cpp</code> <code>L.1017</code> 付近にも</p>
+<div class="highlight"><pre><span></span><span class="kt">void</span> <span class="n">Controller</span><span class="o">::</span><span class="n">toggleEdgeTesselationNature</span><span class="p">(</span><span class="n">Nature</span><span class="o">::</span><span class="n">EdgeNature</span> <span class="n">iNature</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">_edgeTesselationNature</span> <span class="o">^=</span> <span class="p">(</span><span class="n">iNature</span><span class="p">);</span>
+    <span class="n">ComputeViewMap</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>と呼び出しているところがある。ただこの <code>toggleEdgeTesselationNature</code> という関数はソースコードを grep した限りヘッダーファイル以外では他にヒットしないので、これは何かの名残りではないかと考えている。</p>
+<h3>4. prepare(Render *re, SceneRenderLayer *srl)</h3>
+<p>前回の記事で見た <code>/freestyle/intern/blender_interface/FRS_freestyle.cpp</code> にある <code>prepare</code> 関数をもう一度見てみよう。</p>
+<div class="highlight"><pre><span></span><span class="k">static</span> <span class="kt">void</span> <span class="nf">prepare</span><span class="p">(</span><span class="n">Render</span> <span class="o">*</span><span class="n">re</span><span class="p">,</span> <span class="n">SceneRenderLayer</span> <span class="o">*</span><span class="n">srl</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// load mesh</span>
+    <span class="n">re</span><span class="o">-&gt;</span><span class="n">i</span><span class="p">.</span><span class="n">infostr</span> <span class="o">=</span> <span class="n">IFACE_</span><span class="p">(</span><span class="s">&quot;Freestyle: Mesh loading&quot;</span><span class="p">);</span>
+    <span class="n">re</span><span class="o">-&gt;</span><span class="n">stats_draw</span><span class="p">(</span><span class="n">re</span><span class="o">-&gt;</span><span class="n">sdh</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">re</span><span class="o">-&gt;</span><span class="n">i</span><span class="p">);</span>
+    <span class="n">re</span><span class="o">-&gt;</span><span class="n">i</span><span class="p">.</span><span class="n">infostr</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">controller</span><span class="o">-&gt;</span><span class="n">LoadMesh</span><span class="p">(</span><span class="n">re</span><span class="p">,</span> <span class="n">srl</span><span class="p">))</span> <span class="c1">// returns if scene cannot be loaded or if empty</span>
+        <span class="k">return</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">re</span><span class="o">-&gt;</span><span class="n">test_break</span><span class="p">(</span><span class="n">re</span><span class="o">-&gt;</span><span class="n">tbh</span><span class="p">))</span>
+        <span class="k">return</span><span class="p">;</span>
+
+    <span class="c1">// add style modules</span>
+    <span class="n">FreestyleConfig</span> <span class="o">*</span><span class="n">config</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">srl</span><span class="o">-&gt;</span><span class="n">freestyleConfig</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">G</span><span class="p">.</span><span class="n">debug</span> <span class="o">&amp;</span> <span class="n">G_DEBUG_FREESTYLE</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">===  Rendering options  ===&quot;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="kt">int</span> <span class="n">layer_count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="k">switch</span> <span class="p">(</span><span class="n">config</span><span class="o">-&gt;</span><span class="n">mode</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="nl">FREESTYLE_CONTROL_SCRIPT_MODE</span><span class="p">:</span>
+        <span class="c1">// ...</span>
+        <span class="k">break</span><span class="p">;</span>
+    <span class="k">case</span> <span class="nl">FREESTYLE_CONTROL_EDITOR_MODE</span><span class="p">:</span>
+        <span class="c1">// ...</span>
+        <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="c1">// set parameters</span>
+
+    <span class="c1">// ...</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">controller</span><span class="o">-&gt;</span><span class="n">hitViewMapCache</span><span class="p">())</span>
+        <span class="k">return</span><span class="p">;</span>
+
+    <span class="c1">// compute view map</span>
+    <span class="n">re</span><span class="o">-&gt;</span><span class="n">i</span><span class="p">.</span><span class="n">infostr</span> <span class="o">=</span> <span class="n">IFACE_</span><span class="p">(</span><span class="s">&quot;Freestyle: View map creation&quot;</span><span class="p">);</span>
+    <span class="n">re</span><span class="o">-&gt;</span><span class="n">stats_draw</span><span class="p">(</span><span class="n">re</span><span class="o">-&gt;</span><span class="n">sdh</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">re</span><span class="o">-&gt;</span><span class="n">i</span><span class="p">);</span>
+    <span class="n">re</span><span class="o">-&gt;</span><span class="n">i</span><span class="p">.</span><span class="n">infostr</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="n">controller</span><span class="o">-&gt;</span><span class="n">ComputeViewMap</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p><code>FREESTYLE_CONTROL_SCRIPT_MODE</code> と <code>FREESTYLE_CONTROL_EDITOR_MODE</code> という <code>config-&gt;mode</code> によって処理が分岐しているが、基本的には描画処理で必要な設定をそれぞれ準備しているだけなので省略した。</p>
+<p>注目すべきは関数後半の <code>// compute view map</code> のあたり、</p>
+<div class="highlight"><pre><span></span>    <span class="k">if</span> <span class="p">(</span><span class="n">controller</span><span class="o">-&gt;</span><span class="n">hitViewMapCache</span><span class="p">())</span>
+        <span class="k">return</span><span class="p">;</span>
+
+    <span class="c1">// compute view map</span>
+    <span class="n">re</span><span class="o">-&gt;</span><span class="n">i</span><span class="p">.</span><span class="n">infostr</span> <span class="o">=</span> <span class="n">IFACE_</span><span class="p">(</span><span class="s">&quot;Freestyle: View map creation&quot;</span><span class="p">);</span>
+    <span class="n">re</span><span class="o">-&gt;</span><span class="n">stats_draw</span><span class="p">(</span><span class="n">re</span><span class="o">-&gt;</span><span class="n">sdh</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">re</span><span class="o">-&gt;</span><span class="n">i</span><span class="p">);</span>
+    <span class="n">re</span><span class="o">-&gt;</span><span class="n">i</span><span class="p">.</span><span class="n">infostr</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="n">controller</span><span class="o">-&gt;</span><span class="n">ComputeViewMap</span><span class="p">();</span>
+</pre></div>
+
+
+<p>である。つまり <code>hitViewMapCache()</code> が <code>true</code> であれば ViewMap を再計算せずキャッシュを使用するということなのだろう。<code>hitViewMapCache()</code> は、</p>
+<div class="highlight"><pre><span></span><span class="kt">bool</span> <span class="n">Controller</span><span class="o">::</span><span class="n">hitViewMapCache</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">_EnableViewMapCache</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">sceneHashFunc</span><span class="p">.</span><span class="n">match</span><span class="p">())</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="p">(</span><span class="nb">NULL</span> <span class="o">!=</span> <span class="n">_ViewMap</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="n">sceneHashFunc</span><span class="p">.</span><span class="n">store</span><span class="p">();</span>
+    <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>となっている。つまりシーンが変更されなければハッシュ値は一致するので再計算は回避されるようだ。</p>
+<h3>5. Controller::LoadMesh(Render *re, SceneRenderLayer *srl)</h3>
+<p>最後に Blender のメッシュを読み込む <code>Controller::LoadMesh</code> を見てみよう。</p>
+<div class="highlight"><pre><span></span><span class="kt">int</span> <span class="n">Controller</span><span class="o">::</span><span class="n">LoadMesh</span><span class="p">(</span><span class="n">Render</span> <span class="o">*</span><span class="n">re</span><span class="p">,</span> <span class="n">SceneRenderLayer</span> <span class="o">*</span><span class="n">srl</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">BlenderFileLoader</span> <span class="n">loader</span><span class="p">(</span><span class="n">re</span><span class="p">,</span> <span class="n">srl</span><span class="p">);</span>
+
+    <span class="n">loader</span><span class="p">.</span><span class="n">setRenderMonitor</span><span class="p">(</span><span class="n">_pRenderMonitor</span><span class="p">);</span>
+
+    <span class="c1">// ...</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">_EnableViewMapCache</span><span class="p">)</span> <span class="p">{</span>
+
+        <span class="n">NodeCamera</span> <span class="o">*</span><span class="n">cam</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">g_freestyle</span><span class="p">.</span><span class="n">proj</span><span class="p">[</span><span class="mi">3</span><span class="p">][</span><span class="mi">3</span><span class="p">]</span> <span class="o">!=</span> <span class="mf">0.0</span><span class="p">)</span>
+            <span class="n">cam</span> <span class="o">=</span> <span class="n">new</span> <span class="n">NodeOrthographicCamera</span><span class="p">;</span>
+        <span class="k">else</span>
+            <span class="n">cam</span> <span class="o">=</span> <span class="n">new</span> <span class="n">NodePerspectiveCamera</span><span class="p">;</span>
+        <span class="kt">double</span> <span class="n">proj</span><span class="p">[</span><span class="mi">16</span><span class="p">];</span>
+        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">;</span> <span class="n">j</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+                <span class="n">proj</span><span class="p">[</span><span class="n">i</span> <span class="o">*</span> <span class="mi">4</span> <span class="o">+</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">g_freestyle</span><span class="p">.</span><span class="n">proj</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">];</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="n">cam</span><span class="o">-&gt;</span><span class="n">setProjectionMatrix</span><span class="p">(</span><span class="n">proj</span><span class="p">);</span>
+        <span class="n">_RootNode</span><span class="o">-&gt;</span><span class="n">AddChild</span><span class="p">(</span><span class="n">cam</span><span class="p">);</span>
+        <span class="n">_RootNode</span><span class="o">-&gt;</span><span class="n">AddChild</span><span class="p">(</span><span class="n">new</span> <span class="n">NodeSceneRenderLayer</span><span class="p">(</span><span class="o">*</span><span class="n">re</span><span class="o">-&gt;</span><span class="n">scene</span><span class="p">,</span> <span class="o">*</span><span class="n">srl</span><span class="p">));</span>
+
+        <span class="n">sceneHashFunc</span><span class="p">.</span><span class="n">reset</span><span class="p">();</span>
+        <span class="c1">//blenderScene-&gt;accept(sceneHashFunc);</span>
+        <span class="n">_RootNode</span><span class="o">-&gt;</span><span class="n">accept</span><span class="p">(</span><span class="n">sceneHashFunc</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">G</span><span class="p">.</span><span class="n">debug</span> <span class="o">&amp;</span> <span class="n">G_DEBUG_FREESTYLE</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&quot;Scene hash       : &quot;</span> <span class="o">&lt;&lt;</span> <span class="n">sceneHashFunc</span><span class="p">.</span><span class="n">toString</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">hitViewMapCache</span><span class="p">())</span> <span class="p">{</span>
+            <span class="n">ClearRootNode</span><span class="p">();</span>
+            <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">else</span> <span class="p">{</span>
+            <span class="n">delete</span> <span class="n">_ViewMap</span><span class="p">;</span>
+            <span class="n">_ViewMap</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+
+    <span class="n">_Chrono</span><span class="p">.</span><span class="n">start</span><span class="p">();</span>
+
+    <span class="n">WXEdgeBuilder</span> <span class="n">wx_builder</span><span class="p">;</span>
+    <span class="n">wx_builder</span><span class="p">.</span><span class="n">setRenderMonitor</span><span class="p">(</span><span class="n">_pRenderMonitor</span><span class="p">);</span>
+    <span class="n">blenderScene</span><span class="o">-&gt;</span><span class="n">accept</span><span class="p">(</span><span class="n">wx_builder</span><span class="p">);</span>
+    <span class="n">_winged_edge</span> <span class="o">=</span> <span class="n">wx_builder</span><span class="p">.</span><span class="n">getWingedEdge</span><span class="p">();</span>
+
+    <span class="n">duration</span> <span class="o">=</span> <span class="n">_Chrono</span><span class="p">.</span><span class="n">stop</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">G</span><span class="p">.</span><span class="n">debug</span> <span class="o">&amp;</span> <span class="n">G_DEBUG_FREESTYLE</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">&quot;WEdge building   : %lf</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">duration</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="c1">// ...</span>
+
+    <span class="n">_ListOfModels</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="s">&quot;Blender_models&quot;</span><span class="p">);</span>
+
+    <span class="n">_Scene3dBBox</span> <span class="o">=</span> <span class="n">_RootNode</span><span class="o">-&gt;</span><span class="n">bbox</span><span class="p">();</span>
+
+    <span class="n">_bboxDiag</span> <span class="o">=</span> <span class="p">(</span><span class="n">_RootNode</span><span class="o">-&gt;</span><span class="n">bbox</span><span class="p">().</span><span class="n">getMax</span><span class="p">()</span> <span class="o">-</span> <span class="n">_RootNode</span><span class="o">-&gt;</span><span class="n">bbox</span><span class="p">().</span><span class="n">getMin</span><span class="p">()).</span><span class="n">norm</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">G</span><span class="p">.</span><span class="n">debug</span> <span class="o">&amp;</span> <span class="n">G_DEBUG_FREESTYLE</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&quot;Triangles nb     : &quot;</span> <span class="o">&lt;&lt;</span> <span class="n">_SceneNumFaces</span> <span class="o">&lt;&lt;</span> <span class="s">&quot; imported, &quot;</span> <span class="o">&lt;&lt;</span>
+                <span class="n">_winged_edge</span><span class="o">-&gt;</span><span class="n">getNumFaces</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">&quot; retained&quot;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+        <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&quot;Bounding Box     : &quot;</span> <span class="o">&lt;&lt;</span> <span class="n">_bboxDiag</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="n">ClearRootNode</span><span class="p">();</span>
+
+    <span class="n">_SceneNumFaces</span> <span class="o">=</span> <span class="n">_winged_edge</span><span class="o">-&gt;</span><span class="n">getNumFaces</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">_SceneNumFaces</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">DeleteWingedEdge</span><span class="p">();</span>
+        <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p><code>WXEdgeBuilder</code> から <code>_winged_edge</code> が生成されている。<code>WXEdge</code> の <code>X</code> というのは何かというと <code>/freestyle/intern/winged_edge/WXEdgeBuilder.cpp</code> に、</p>
+<div class="highlight"><pre><span></span><span class="cm">/** \file blender/freestyle/intern/winged_edge/WXEdgeBuilder.cpp</span>
+<span class="cm"> *  \ingroup freestyle</span>
+<span class="cm"> *  \brief Class inherited from WingedEdgeBuilder and designed to build a WX (WingedEdge + extended info</span>
+<span class="cm"> *         (silhouette etc...)) structure from a polygonal model</span>
+</pre></div>
+
+
+<p>というコメントがある。この <code>extended info</code> というのは前に見た <code>edgeDetector</code> により検知した様々な <code>feature edges</code> の種類、たとえば <code>silhouette</code> や <code>valleys</code> などを保持しているのだと予想している。</p>
+<p>さて ViewMap の構築やキャッシュの処理について、ざっくりと流れを見てみた。キャッシュされた ViewMap 自体は <code>Controller()</code> にアクセスするのが難しい以上 Python からアクセスするのは無理そうだ。なので render 後のポスト処理から処理を実装していくのをメインに進めていけば良さそうである。</p>
                 <div class="clear"></div>
 
                 <div class="info">
@@ -86,8 +526,9 @@
                 <div class="clear"></div>
                 <div class="pages">
 
-                    <a href="http://www.chino.coffee/page/2" class="prev_page">&larr;&nbsp;Previous</a>
-                    <span>Page 3 of 3</span>
+                    <a href="http://www.chino.coffee/tag/freestyle2.html" class="prev_page">&larr;&nbsp;Previous</a>
+                    <a href="http://www.chino.coffee/tag/freestyle4.html" class="next_page">Next&nbsp;&rarr;</a>
+                    <span>Page 3 of 6</span>
                 </div>
 
         </div>

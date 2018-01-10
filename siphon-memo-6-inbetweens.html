@@ -4,21 +4,23 @@
     <link href="https://fonts.googleapis.com/css?family=Dosis:200" rel="stylesheet">
     <link href='https://fonts.googleapis.com/css?family=Quicksand:700' rel='stylesheet' type='text/css'>
     <link href='https://fonts.googleapis.com/css?family=Josefin+Sans:300' rel='stylesheet' type='text/css'>
-    <meta charset="utf-8" />
-    <title>chino.coffee | articles tagged "Siphon"</title>
+        <meta charset="utf-8" />
+    <title>chino.coffee | Siphon memo 6 - inbetweens</title>
     <link rel="shortcut icon" type="image/png" href="http://www.chino.coffee/favicon.png">
     <link rel="shortcut icon" type="image/x-icon" href="http://www.chino.coffee/favicon.ico">
     <link href="http://www.chino.coffee/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="chino.coffee Full Atom Feed" />
+    <link href="http://www.chino.coffee/feeds/software.atom.xml" type="application/atom+xml" rel="alternate" title="chino.coffee Categories Atom Feed" />
     <link rel="stylesheet" href="http://www.chino.coffee/theme/css/screen.css" type="text/css" />
     <link rel="stylesheet" href="http://www.chino.coffee/theme/css/pygments.css" type="text/css" />
     <link rel="stylesheet" href="http://www.chino.coffee/theme/css/print.css" type="text/css" media="print" />
     <meta name="generator" content="Pelican" />
+
+    <meta name="keywords" content="Blender,Freestyle,Siphon" />
 </head>
 <body>
     <header>
         <nav>
             <ul>
-                <li class="ephemeral selected"><a href="http://www.chino.coffee/tag/siphon5.html">Siphon</a></li>
                 <li><a href="/archives.html">blog</li>
                 <li><a></a></li>
 
@@ -34,20 +36,17 @@
         <hr />
     </header>
     <div id="wrapper">
-        <div id="content">
-            <h4 class="date">2017-04-09</h4>
+        <div id="content">            <h4 class="date">2018-01-11</h4>
 
             <article class="post">
                 <h2 class="title">
-                    <a href="http://www.chino.coffee/siphon-memo-2.html" rel="bookmark" title="Permanent Link to &quot;Siphon memo 2&quot;">Siphon memo 2</a>
+                    <a href="http://www.chino.coffee/siphon-memo-6-inbetweens.html" rel="bookmark" title="Permanent Link to &quot;Siphon memo 6 - inbetweens&quot;">Siphon memo 6 - inbetweens</a>
                 </h2>
 
-                <p>Siphon は一度 <code>view map</code> を計算さえすれば <code>feature edges</code> からストロークの生成はごく短時間で可能であるという予想で開発を進めている。そのためには <code>view map</code> を bake する必要がある。とりあえず以下のコードで <a href="https://docs.blender.org/api/blender_python_api_2_78c_release/bpy.types.RegionView3D.html?highlight=regionview3d">RegionView3D</a> をロックすることができる。</p>
-<div class="highlight"><pre><span></span><span class="n">context</span><span class="o">.</span><span class="n">space_data</span><span class="o">.</span><span class="n">region_3d</span><span class="o">.</span><span class="n">lock_rotation</span> <span class="o">=</span> <span class="bp">True</span>
-</pre></div>
-
-
-<p><code>Viewport Shading</code> で <code>Rendered</code> にしておき、その画面を上記のコードでロックしておく。そして Siphon NodeTree 上での編集操作をフックしておいてストロークを描画する形を考えている。Render Result の方もリアルタイムに更新できないかと考えている。</p>
+                <p>Siphon の輪郭線編集には<a href="http://www.chino.coffee/siphon-memo-5-shape-manipulation.html">前回の記事</a>にある通り GPLVM を利用する予定である。GPLVM と generalized Procrustes analysis による<a href="https://github.com/ChinoCoffee/inbetweens">中割りの実験用リポジトリ</a>を作成した。</p>
+<p><img alt="inbetweens.gif" src="/images/blog-20180111-inbetweens.gif"></p>
+<p>Closed-contour の変形のみここでは表示されているが、閉じていないもしくは複数パスでも基本的には動作する。ただし bezier 曲線の制御点数については同一でなければならない。</p>
+<p>まだ実装できていないのは covariance function である。論文をよく読んでみると訓練時には RBF kernel + Noise を用い、予測時には RBF kernel のみ使用すると記されている。GPy でそのような kernel 設定ができるかどうか後ほど調べる予定である。</p>
                 <div class="clear"></div>
 
                 <div class="info">
@@ -56,18 +55,9 @@
                     &nbsp;
                     &nbsp;<a href="http://www.chino.coffee/tag/blender.html" class="tags">Blender</a>
                     &nbsp;<a href="http://www.chino.coffee/tag/freestyle.html" class="tags">Freestyle</a>
-                    &nbsp;<a href="http://www.chino.coffee/tag/siphon.html" class="tags selected">Siphon</a>
+                    &nbsp;<a href="http://www.chino.coffee/tag/siphon.html" class="tags">Siphon</a>
                 </div>
             </article>
-
-                <div class="clear"></div>
-                <div class="pages">
-
-                    <a href="http://www.chino.coffee/tag/siphon4.html" class="prev_page">&larr;&nbsp;Previous</a>
-                    <a href="http://www.chino.coffee/tag/siphon6.html" class="next_page">Next&nbsp;&rarr;</a>
-                    <span>Page 5 of 6</span>
-                </div>
-
         </div>
         <div class="clear"></div>
     </div>
