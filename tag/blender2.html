@@ -35,62 +35,17 @@
     </header>
     <div id="wrapper">
         <div id="content">
-            <h4 class="date">2017-05-27</h4>
+            <h4 class="date">2018-01-11</h4>
 
             <article class="post">
                 <h2 class="title">
-                    <a href="http://www.chino.coffee/siphon-memo-5-shape-manipulation.html" rel="bookmark" title="Permanent Link to &quot;Siphon memo 5 - shape manipulation&quot;">Siphon memo 5 - shape manipulation</a>
+                    <a href="http://www.chino.coffee/siphon-memo-6-inbetweens.html" rel="bookmark" title="Permanent Link to &quot;Siphon memo 6 - inbetweens&quot;">Siphon memo 6 - inbetweens</a>
                 </h2>
 
-                <p>現在開発している Blender-addon である Siphon は Freestyle から抽出した輪郭線を NodeTree 上でパラメータを変更しながらインタラクティブに編集するのが一つの目標である。
-今回は shape manipulation についていくつか調査し、Siphon への実装案についてメモする。</p>
-<h3>1) 2.5D Cartoon Models</h3>
-<iframe src="https://player.vimeo.com/video/11941007?color=ff9933" width="640" height="560" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
-
-<p><a href="https://vimeo.com/11941007">MIT 2.5D Cartoon Models</a> from <a href="https://vimeo.com/lesterbanks">lester banks</a> on <a href="https://vimeo.com">Vimeo</a>.</p>
-
-<p><a href="https://dspace.mit.edu/handle/1721.1/73111"><em>Alec Rivers, Takeo Igarashi, and Frédo Durand. 2010. 2.5D cartoon models. ACM Transactions on Graphics 29, 4, Article 59 (July 2010), 7 pages.</em></a></p>
-<p>この研究は 2D vector を三次元空間に配置し、擬似的なレンダリングを行うことによって様々な方向からキャラクターを描画できるようにする。上下左右などいくつかの方向の 2D vector を準備し対応付けしている。3Dモデルの作成は必要なく絵を描くことで立体的表現を構築できるメリットがある。また 3Dモデルでは不可能に近いイラストライクな表現を実現することができる。ちなみに Frédo Durand 氏は Freestyle の研究にも携わった人物である。</p>
-<p><a href="http://www.live2d.com/en/products/euclid">Live2D Euclid</a> は極めてイラストライクで自然なキャラクターを表現することができるが、顔部分の基本的な動作原理は 2.5D Cartoon Models とほぼ同じではないかと考えている。</p>
-<blockquote class="twitter-tweet" data-lang="en"><p lang="ja" dir="ltr">Live2D EuclidをUNITYで見てみたら凄いことになってる。<br>なんかもっといい方法が思い付きそうで思い付かない。 <a href="https://t.co/wcdaLibwGy">pic.twitter.com/wcdaLibwGy</a></p>&mdash; rukusu20XX (@rukusu2012) <a href="https://twitter.com/rukusu2012/status/857935959572201472">April 28, 2017</a></blockquote>
-
-<script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
-
-<h3>2) Latent Doodle Space</h3>
-<iframe src="https://player.vimeo.com/video/3235882" width="640" height="432" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
-
-<p><a href="https://vimeo.com/3235882">Latent Doodle Space (Eurographics 2006)</a> from <a href="https://vimeo.com/baxissimo">Bill Baxter</a> on <a href="https://vimeo.com">Vimeo</a>.</p>
-
-<p><em>W. V. Baxter and K.-I. Anjyo. Latent doodle space. In EUROGRAPHICS, volume 25, pages 477–485, Vienna, Austria, September 4-8 2006.</em></p>
-<p>入力ストロークの対応付けを行うアルゴリズムと、そこから low-dimensional latent space を構築することで、画像間の interpolation を行っている。特に SIGGRAPH 2014 の Course である <a href="http://olm.co.jp/rd/research_event/scattered-data-interpolation-for-computer-graphics/?lang=en">Scattered Data Interpolation for Computer Graphics (OLM Digital R&amp;D)</a> は参考になる。Ken Anjyo 氏の研究は NPR に関連したものも多く興味深いものが多い。</p>
-<h3>3) Learning a Manifold of Fonts</h3>
-<p><em>Neill D.F. Campbell and Jan Kautz. Learning a Manifold of Fonts. In ACM Transactions on Graphics (SIGGRAPH) 33(4), 2014</em></p>
-<p>Learning a Manifold of Fonts は複数のフォントのキャラクターを２次元の latent space で操作し補間することができる。<a href="http://vecg.cs.ucl.ac.uk/Projects/projects_fonts/projects_fonts.html">オンラインデモ</a>でブラウザ上でアルファベットをマウスで様々に変化させることができ、たとえばセリフ体とサンセリフ体のあいの子のようなものを作り出すことができる。フォントはアウトラインを polyline で抽出され正規化される。同じアルファベットでも例えば g のようにフォントによってはトポロジが異なる場合だと補間することができず、別種として取り扱われる。複数のキャラクターを energy-based optimization を使って対応付け（同じ頂点数にする）、その後 generative non-linear manifold に GPLVM (Gaussian Process Latent Variable Models) を用いて次元削減する。</p>
-<h3>4) Roto++</h3>
-<iframe width="560" height="315" src="https://www.youtube.com/embed/L1oIdrhUHk8?ecver=1" frameborder="0" allowfullscreen></iframe>
-
-<p><em>Wenbin Li and Fabio Viola and Jonathan Starck and Gabriel J. Brostow and Neill D.F. Campbell. Roto++: Accelerating Professional Rotoscoping using Shape Manifolds. ACM Transactions on Graphics (In proceeding of ACM SIGGRAPH'16)</em></p>
-<p>ロトスコープは撮影した映像から frame by frame で形状を切り出し、アニメーションにする手法である。frame-by-frame であるため、かなり手間のかかる作業であり、コンピュータによる自動切り出しや補助技術が以前から開発されていたようである。<a href="http://visual.cs.ucl.ac.uk/pubs/rotopp/">Roto++</a> は shape manifold framework を使って作業補助する手法を提案している。ここでは polyline ではなく Bezier 曲線を low-dimensional latent space に GPLVM で落とし込んでいる。</p>
-<h3>5) Sketch-RNN</h3>
-<blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">A Neural Representation of Sketch Drawings. My work on generative vector image modelling with recurrent neural nets. <a href="https://t.co/Iyp913D8IZ">https://t.co/Iyp913D8IZ</a> <a href="https://t.co/qO86nFnjG3">pic.twitter.com/qO86nFnjG3</a></p>&mdash; hardmaru (@hardmaru) <a href="https://twitter.com/hardmaru/status/852310730321698816">April 13, 2017</a></blockquote>
-
-<script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
-
-<p><a href="https://quickdraw.withgoogle.com/">Quick, Draw!</a> はスケッチを人間が 20 秒で描き NN がそれを判定する。つい最近そうして収集された<a href="https://quickdraw.withgoogle.com/data">5000万件のデータセット</a>が公開された。Sketch-RNN は Bidirectional RNN を用いたスケッチの生成モデルであり、 Google の Magenta プロジェクトの一部として現在公開されている。これまで紹介してきたものと違うのは、ストロークのデータにタイムスタンプが付けられており、時系列データとして扱っているところである。以下のツイートのように word2vec のようなアナロジー計算も行うことができる。</p>
-<blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">Can machines learn to draw and generalize abstract concepts like people can? Cat-pig math suggests it&#39;s possible! <a href="https://t.co/DRQ1thnB8L">https://t.co/DRQ1thnB8L</a> <a href="https://t.co/4mgO89c9nS">pic.twitter.com/4mgO89c9nS</a></p>&mdash; Google Research (@googleresearch) <a href="https://twitter.com/googleresearch/status/852567416399724545">April 13, 2017</a></blockquote>
-
-<script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
-
-<h3>6) Menpo</h3>
-<p><a href="http://www.menpo.org/">Menpo</a> は Python の deform library であり、活発に開発が行われている。しっかりと把握はできていないのだがどちらかというと raster images に対してトポロジーをフィットする機能が重点的に開発されているように見える。</p>
-<h3>実装案</h3>
-<p>Siphon では 2.5D Cartoon Models のような 2D vector の３次元空間への配置手法と GPLVM による shape manifold を使った Freestyle の線画 (ViewMap) の編集を使おうと考えている。いまのところ以下に示した画像のように Blender 上で ViewMap やオブジェクトの配置を latent space に落とし込み manifold をノード上で操作することで輪郭線を編集する方針で進めている。<code>Pot object</code> という Python クラスを Siphon で定義し、そこに manifold 構築などの機能を加える予定である。</p>
-<p><img alt="Pot object" src="/images/blog-20170527-pot.png"></p>
-<p>BayesianGPLVM 等は Python だと <a href="https://github.com/SheffieldML/GPy">GPy</a> が使いやすそうなので、こちらを試し始めている。<a href="https://github.com/GPflow/GPflow">GPflow</a> という TensorFlow バックエンドを用いたものも登場しており、こちらは GPU を用いて高速化もできるそうなので、そのうち移行するかもしれない。</p>
-<p>Blender アドオンをいろいろ調べたりして気づいたのは <code>SpaceImageEditor</code> などのインターフェースを操作する際、Blender API だけではアクセスできない属性が存在するため <a href="https://docs.python.org/3/library/ctypes.html">ctypes</a> を使って直接メモリ上を参照するワザがよく使われていることだ。Blender のヘッダーファイルを参照し構造体を記述するため、プログラムのライセンスは自動的に GPL になる。Shape manipulation などのライブラリを用いたりするときにライセンスが競合したりすると困るので、以下のように <code>siphon-server</code> というものとアドオンを分離する設計で進めようと考えている。すぐには分離しないかもしれないが...</p>
-<p>輪郭線編集のときに問題になるのは Z-order である。ここは Freestyle で QI (quantitative invisibility) の情報が取れるので、この情報と 2D Vector の Boolean operations を使い解決できないかと考えている。</p>
-<p><img alt="separation" src="/images/blog-20170527-separation.png"></p>
-<p>アドオンとサーバは <a href="http://www.grpc.io/">gRPC</a> で通信するように上の画像だとあるが、もっと簡単なものから始めるかもしれない。また、個人的に Cycling '74 の <a href="https://cycling74.com/products/max/">Max</a> もよく使うので OSC でそのうちアドオンと通信できればと考えている（確か <a href="https://github.com/nortikin/sverchok">Sverchok</a> に OSC による通信ノードが存在している）。</p>
+                <p>Siphon の輪郭線編集には<a href="http://www.chino.coffee/siphon-memo-5-shape-manipulation.html">前回の記事</a>にある通り GPLVM を利用する予定である。GPLVM と generalized Procrustes analysis による<a href="https://github.com/ChinoCoffee/inbetweens">中割りの実験用リポジトリ</a>を作成した。</p>
+<p><img alt="inbetweens.gif" src="/images/blog-20180111-inbetweens.gif"></p>
+<p>Closed-contour の変形のみここでは表示されているが、閉じていないもしくは複数パスでも基本的には動作する。ただし bezier 曲線の制御点数については同一でなければならない。</p>
+<p>まだ実装できていないのは covariance function である。論文をよく読んでみると訓練時には RBF kernel + Noise を用い、予測時には RBF kernel のみ使用すると記されている。GPy でそのような kernel 設定ができるかどうか後ほど調べる予定である。</p>
                 <div class="clear"></div>
 
                 <div class="info">
@@ -108,7 +63,7 @@
 
                     <a href="http://www.chino.coffee/tag/blender.html" class="prev_page">&larr;&nbsp;Previous</a>
                     <a href="http://www.chino.coffee/tag/blender3.html" class="next_page">Next&nbsp;&rarr;</a>
-                    <span>Page 2 of 6</span>
+                    <span>Page 2 of 7</span>
                 </div>
 
         </div>
