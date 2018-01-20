@@ -43,11 +43,10 @@
                     <a href="http://www.chino.coffee/siphon-memo-7-stroke-manifold.html" rel="bookmark" title="Permanent Link to &quot;Siphon memo 7 - stroke manifold&quot;">Siphon memo 7 - stroke manifold</a>
                 </h2>
 
-                <p>Freestyle の ViewMap の入出力についてのメモ（間違いがありましたらご指摘いただければ幸いです）。</p>
-<p>Freestyle は入力された 3D モデルから生成される ViewMap について入出力プログラム <a href="https://git.blender.org/gitweb/gitweb.cgi/blender.git/blob/HEAD:/source/blender/freestyle/intern/view_map/ViewMapIO.cpp">ViewMapIO.cpp</a> が用意されている。Blender にも確かにソースコードの断片が含まれているが Blender からは ViewMap の入出力について UI からは cache 以外ほとんど考慮しない設計になっていて、ほとんど使われていないように見える。</p>
-<p>Blender Freestyle のソースコードを読んでみた限りでは、この入出力パイプラインの入力を Blender Python API 上ですり替えることは難しそうである。その理由は ViewMap 内部にある stroke や chain などのコンテナに対して Python API では <code>Operators()</code> を通じ getter しか用意されておらず setter が無いためである。ただ、これは Python Object を通じて ViewMap の様々な属性を変換する手間を考えると computational resource 的に有利な実装と言えると考える。</p>
+                <p>Freestyle の ViewMap の入出力についてのメモ。</p>
+<p>Freestyle は入力された 3D モデルから生成される ViewMap について入出力 <a href="https://git.blender.org/gitweb/gitweb.cgi/blender.git/blob/HEAD:/source/blender/freestyle/intern/view_map/ViewMapIO.cpp">ViewMapIO.cpp</a> が用意されている。ただ、Blender にも確かに同じソースコード断片が含まれているものの ViewMap の入出力制御は基本的に cache 以外不可能なように見える。Blender Freestyle のソースコードを読んでみた限り、この入出力パイプラインの入力（すなわち style modules に入力する ViewMap）を Blender Python API 上ですり替えたり制御するのは難しそうである。その理由は ViewMap 内部にある stroke や chain などのコンテナに対して Python API では <code>Operators()</code> を通じ getter しか用意されておらず setter が無いためである。ただ、これは Python Object を通じて ViewMap の様々な属性を変換する手間を考えると computational resource 的には有利な実装だとは思う。</p>
 <h3>TODO</h3>
-<p>Freestyle から生成したストロークを使えば manifold が作れそうである。これからやることは、</p>
+<p>Freestyle から生成した ViewMap を入力ベクトルとして GPLVM に与えることは難しそうである。ただ、出力の strokes を使えば manifold が作れそうである。これからやることは、</p>
 <h3>a) ベジエ曲線化</h3>
 <p>これは <a href="https://docs.blender.org/api/master/freestyle.shaders.html#freestyle.shaders.BezierCurveShader"><code>freestyle.shaders.BezierCurveShader</code></a> を用いれば良い。自前で polyline から bezier にする場合は permissive な license で公開されている <a href="https://github.com/erich666/GraphicsGems/blob/master/gems/FitCurves.c">FitCurves.c</a> などを参考にする。</p>
 <h3>b) 制御点を同一に</h3>
@@ -56,7 +55,7 @@
 <p>どんなに 3D モデルを NPR でレンダリング しても 2D のイラストレーションに近づけない理由の一つは、humanistic 2D rendering で局所的にパースを自由自在に変化できることが大きく関係しているのではないかと考えている。解決方法としては、複数フレームにおける左目と右目などのパーツの translation, rotation, scale (rigid transformation) を feature に取り、latent manifold として操作すれば 3DCG であっても二次元的な操作が可能になるのではないかと考えている。</p>
 <h3>d) その他、後でやりましょう的な</h3>
 <p>個人的に興味があるのは、GPLVM に与える入力ベクトルの構成である。Freestyle から得られる情報は occuluding (occuluded) surfaces や 2D Curvature, 2D (3D) Normal そして Quantitative Invisibility (qi) と多種多様である（そしてそれがエンジニアから見た Freestyle の魅力の一つでもある）。ストロークの情報だけでなくこれらの情報を利用すれば、生成モデルを通して temporal coherence の問題、さらには二次元と三次元の断絶をある程度緩和することができるのではないかと考えている。</p>
-<p>Temporal coherence の問題については <a href="https://github.com/hvfrancesco/freestylesvg">GitHub の freestylesvg リポジトリ</a> の初音ミクの動画を見れば、線がチカチカしていたりと不自然さがなんとなく分かるのではないかと思う（ただ stroke ではなく region であればなかなかうまくいくのでは、とも感じる）。商用だと <a href="https://www.psoft.co.jp/jp/product/pencil/3dsmax/">Pencil+ 4</a> などの高品質な製品があり、Blender にもこのようなプラグインが欲しいという要望を見かけることもあるが、GPL 的に難しいだろうなという気がしている。</p>
+<p>Temporal coherence の問題については <a href="https://github.com/hvfrancesco/freestylesvg">GitHub の freestylesvg リポジトリ</a> の初音ミクの動画を見れば、線がチカチカしていたりと不自然さがなんとなく分かるのではないかと思う（ただ stroke ではなく region であればなかなかうまくいくのでは、とも感じる）。商用だと <a href="https://www.psoft.co.jp/jp/product/pencil/3dsmax/">Pencil+ 4</a> などの高品質な製品があり、Blender にもこのようなプラグインが欲しいという要望を見かけることもあるが、GPL 的に難しいだろうなという気がしている。余裕があるかぎり様々な実験ができればと考えている。</p>
                 <div class="clear"></div>
 
                 <div class="info">
