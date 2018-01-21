@@ -5,7 +5,7 @@
     <link href='https://fonts.googleapis.com/css?family=Quicksand:700' rel='stylesheet' type='text/css'>
     <link href='https://fonts.googleapis.com/css?family=Josefin+Sans:300' rel='stylesheet' type='text/css'>
         <meta charset="utf-8" />
-    <title>chino.coffee | Siphon memo 7 - stroke manifold</title>
+    <title>chino.coffee | Siphon memo 7 - ViewMap I/O</title>
     <link rel="shortcut icon" type="image/png" href="http://www.chino.coffee/favicon.png">
     <link rel="shortcut icon" type="image/x-icon" href="http://www.chino.coffee/favicon.ico">
     <link href="http://www.chino.coffee/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="chino.coffee Full Atom Feed" />
@@ -40,11 +40,11 @@
 
             <article class="post">
                 <h2 class="title">
-                    <a href="http://www.chino.coffee/siphon-memo-7-stroke-manifold.html" rel="bookmark" title="Permanent Link to &quot;Siphon memo 7 - stroke manifold&quot;">Siphon memo 7 - stroke manifold</a>
+                    <a href="http://www.chino.coffee/siphon-memo-7-viewmap-io.html" rel="bookmark" title="Permanent Link to &quot;Siphon memo 7 - ViewMap I/O&quot;">Siphon memo 7 - ViewMap I/O</a>
                 </h2>
 
                 <p>Freestyle の ViewMap の入出力についてのメモ。</p>
-<p>Freestyle は入力された 3D モデルから生成される ViewMap について入出力 <a href="https://git.blender.org/gitweb/gitweb.cgi/blender.git/blob/HEAD:/source/blender/freestyle/intern/view_map/ViewMapIO.cpp">ViewMapIO.cpp</a> が用意されている。ただ、Blender にも確かに同じソースコード断片が含まれているものの、Python API から ViewMap の入出力を行ったり style modules に入力する ViewMap をすり替えたりするのは難しそうである。その理由は Freestyle の <code>Operators()</code> の Python API からは描画処理で使用する stroke や chain などのコンテナの getter しか用意されておらず setter が無いためである。</p>
+<p>Freestyle は入力された 3D モデルから生成される ViewMap について入出力 <a href="https://git.blender.org/gitweb/gitweb.cgi/blender.git/blob/HEAD:/source/blender/freestyle/intern/view_map/ViewMapIO.cpp">ViewMapIO.cpp</a> が用意されている。ただ、Python API から style modules に入力する ViewMap を変更したりするのは難しそうである。その理由は Freestyle の <a href="https://docs.blender.org/api/master/freestyle.types.html#freestyle.types.Operators"><code>Operators()</code></a> の Python API からは描画処理で使用する stroke や chain などのコンテナの getter しか用意されておらず setter が無いためである。</p>
 <h3>TODO</h3>
 <p>Freestyle から生成した ViewMap をそのまま入力ベクトルとして GPLVM に与えることは難しそうである。ただ、出力の strokes を使えば manifold が作れそうである。これからやることは、</p>
 <h3>a) ベジエ曲線化</h3>
