@@ -52,8 +52,8 @@
 <h3>b) 制御点を同一に</h3>
 <p>入力データの次元数を同一にしないと latent manifold の計算を行うことができない。最近 Blender に搭載された <a href="https://developer.blender.org/D2070">Curve Decimate (D2070)</a> を参考にする。</p>
 <h3>c) パーツ配置の latent manifold 化</h3>
-<p>どんなに 3D モデルを NPR でレンダリング しても 2D のイラストレーションに近づけない理由の一つは、humanistic 2D rendering で局所的にパースを自由自在に変化できることが大きく関係しているのではないかと考えている。解決方法としては、複数フレームにおける左目と右目などのパーツの translation, rotation, scale (rigid transformation) を feature に取り、latent manifold として操作すれば 3DCG であっても二次元的な操作が可能になるのではないかと考えている。</p>
-<h3>d) その他、後でやりましょう的な</h3>
+<p>3D モデルを NPR で 2D イラストレーションらしくレンダリングしても 3D っぽさが残ってしまう理由の一つは、人間が描く際、局所的にパースを自由自在に変化できることが大きく関係しているのではないかと考えている。解決方法としては、複数フレームにおける左目と右目などのパーツの translation, rotation, scale (rigid transformation) を feature に取り、latent manifold として操作すれば 3DCG であっても二次元的な操作が可能になるのではないかと考えている。</p>
+<h3>d) その他</h3>
 <p>個人的に興味があるのは、GPLVM に与える入力ベクトルの構成である。Freestyle から得られる情報は occuluding (occuluded) surfaces や 2D Curvature, 2D (3D) Normal そして Quantitative Invisibility (qi) と多種多様である（そしてそれがエンジニアから見た Freestyle の魅力の一つでもある）。ストロークの情報だけでなくこれらの情報を利用すれば、生成モデルを通して temporal coherence の問題、さらには二次元と三次元の断絶をある程度緩和することができるのではないかと考えている。</p>
 <p>Temporal coherence の問題については <a href="https://github.com/hvfrancesco/freestylesvg">GitHub の freestylesvg リポジトリ</a> の初音ミクの動画を見れば、線がチカチカしていたりと不自然さがなんとなく分かるのではないかと思う（ただ stroke ではなく region であればなかなかうまくいくのでは、とも感じる）。商用だと <a href="https://www.psoft.co.jp/jp/product/pencil/3dsmax/">Pencil+ 4</a> などの高品質な製品があり、Blender にもこのようなプラグインが欲しいという要望を見かけることもあるが、GPL 的に難しいだろうなという気がしている。余裕があるかぎり様々な実験ができればと考えている。</p>
                 <div class="clear"></div>
